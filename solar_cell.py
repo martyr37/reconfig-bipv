@@ -16,7 +16,7 @@ logger = Logging.setup_logging()
 
 ####################################################################################################
 
-class solar_cell(SubCircuit):
+class SolarCell(SubCircuit):
     __nodes__ = ('t_in', 't_out')
     
     def __init__(self, name, intensity=10@u_A, series_resistance=1@u_mOhm, parallel_resistance=10@u_kOhm,\
