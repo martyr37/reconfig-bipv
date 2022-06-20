@@ -18,7 +18,7 @@ from solar_cell import SolarCell
 
 ####################################################################################################
 
-#%%
+#%% SolarModule
 class SolarModule():
     """
     The SolarModule object will contain:
@@ -33,7 +33,6 @@ class SolarModule():
     """
 
     def __init__(self):
-        self.mpp = get_mpp()
         pass
     
     def __repr__(self):
@@ -59,28 +58,4 @@ class SolarModule():
         #self._mpp = something
         
     # do the same thing for voc, isc, vmp, imp, FF.
-    
-    mpp = property(get_mpp, set_mpp)
-    
-COLUMNS = 6
-ROWS = 10
-
-cell_names = []
-index = 0
-
-for row in range(0, ROWS):
-    for column in range(0, COLUMNS):
-        cell_names.append(str(row) + str(column))
-
-topology = []
-
-for cell in cell_names:
-    cell_dict = {cell_inner: 0 for cell_inner in cell_names}
-    topology.append(cell_dict)
-        
-topology = np.array(topology)
-topology = topology.reshape((ROWS, COLUMNS))
-
-# TODO: recreate basic connections (series, parallel, SP, TCT) 
-# TODO: topology to netlist
  
