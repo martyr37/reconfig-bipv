@@ -49,7 +49,7 @@ def TCT_interconnection(NUMBER_IN_SERIES, NUMBER_IN_PARALLEL, intensity_array):
     circuit = Circuit('TCT Interconnected')
     for row in range(0,NUMBER_IN_PARALLEL): 
         for column in range(0,NUMBER_IN_SERIES):
-            circuit.subcircuit(solar_cell(str(row) + str(column),intensity=intensity_array[row,column]))
+            circuit.subcircuit(SolarCell(str(row) + str(column),intensity=intensity_array[row,column]))
         
     for row in range(0, NUMBER_IN_PARALLEL):
         for column in range(0, NUMBER_IN_SERIES):
@@ -67,7 +67,7 @@ def SP_interconnection(NUMBER_IN_SERIES, NUMBER_IN_PARALLEL, intensity_array):
     circuit = Circuit('SP Interconnected')
     for row in range(0,NUMBER_IN_PARALLEL):
         for column in range(0,NUMBER_IN_SERIES):
-            circuit.subcircuit(solar_cell(str(row) + str(column),intensity=intensity_array[row,column]))
+            circuit.subcircuit(SolarCell(str(row) + str(column),intensity=intensity_array[row,column]))
     
     for row in range(0, NUMBER_IN_PARALLEL):
         for column in range(0, NUMBER_IN_SERIES):
@@ -87,7 +87,7 @@ def all_series_connection(columns, rows, intensity_array):
     circuit = Circuit('All Series Connected')
     for row in range(0, rows):
         for column in range(0, columns):
-            circuit.subcircuit(solar_cell(str(row) + str(column), intensity=intensity_array[row,column]))
+            circuit.subcircuit(SolarCell(str(row) + str(column), intensity=intensity_array[row,column]))
         
     for row in range(0, rows):
         if row % 2 == 0: # 1st, 3rd, 5th row
@@ -125,7 +125,7 @@ def all_series_bypass(columns, rows, intensity_array):
     circuit = Circuit('All Series w/ Bypass Diodes')
     for row in range(0, rows):
         for column in range(0, columns):
-            circuit.subcircuit(solar_cell(str(row) + str(column), intensity=intensity_array[row,column]))
+            circuit.subcircuit(SolarCell(str(row) + str(column), intensity=intensity_array[row,column]))
     
     circuit.subcircuit(BypassDiode('D'))
     bypass_diode_count = 0
