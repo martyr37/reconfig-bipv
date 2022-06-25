@@ -101,8 +101,8 @@ class CircuitEmbedding():
         return True
 
 #%% Convetional series module
-def series_embedding(rows, columns, channels):
-    embedding = CircuitEmbedding(rows, columns, channels)
+def series_embedding(rows, columns):
+    embedding = CircuitEmbedding(rows, columns)
     
     for r in range(rows):
         if r % 2 == 0:
@@ -135,38 +135,45 @@ def series_embedding(rows, columns, channels):
 #array = series_embedding(ROWS, COLUMNS, CHANNELS)  
 
 #%% Total-cross-tied module
-def tct_embedding(rows, columns, channels):
-    embedding = CircuitEmbedding(rows, columns, channels)
+def tct_embedding(rows, columns):
+    embedding = CircuitEmbedding(rows, columns)
     for c in range(embedding.columns):
         for r in range(embedding.rows):
+            # first column is connected to ground
+            if c == 0:
+                embedding.connect_to_ground(r, c)
+            # last column is connected to +ve terminal
+            elif c == embedding.columns - 1:
+                embedding.connect_to_pos(r,c)
             # column to the right is all 1's (series)
             if c != embedding.columns - 1:
-                embedding.make_connection(r, c, r, c+1, 's')
-            if r != rows - 1:
-                embedding.make_connection(r, c, r+1, c, 'p')
-        
+                for r1 in range(embedding.rows):
+                    embedding.make_connection(r, c, r1, c+1, 's')
+            # cells below are all 2's (parallel)
+            for r1 in range(r + 1, embedding.rows):
+                embedding.make_connection(r, c, r1, c, 'p')        
+
     return embedding
     
-#array = tct_embedding(ROWS, COLUMNS, CHANNELS)  
+array = tct_embedding(ROWS, COLUMNS)  
     
 #%% Create PySpice netlist from embedding
-intensity_array = np.full((ROWS, COLUMNS), 10)
+sun = np.full((ROWS, COLUMNS), 10)
 
-def make_netlist(embedding):
-    cell_id = 1 # use separator
+def make_netlist(embedding, shading_map):
+    # use separator
     circuit = Circuit('Netlist')
-    rows, columns = embedding.shape[0], embedding.shape[1]
+    rows, columns = embedding.rows, embedding.columns
     for r in range(rows):
         for c in range(columns):
-            circuit.subcircuit(SolarCell(cell_id, \
-                                intensity=intensity_array[r,c]))
-            cell_id += 1
+            circuit.subcircuit(SolarCell(str(r) + '-' + str(c), \
+                                intensity=shading_map[r,c]))
     
     for r in range(rows):
         for c in range(columns):
             # make netlist
             pass
+    return circuit
 
-#make_netlist(array)
-# TODO: recreate basic connections (series, parallel, SP, TCT) 
+c = make_netlist(array, sun)
 # TODO: topology to netlist
