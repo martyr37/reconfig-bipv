@@ -16,132 +16,134 @@ from solar_cell import SolarCell
 from solar_module import SolarModule
 
 ####################################################################################################
-
 #%% embedding dimensions 
 ROWS = 10
 COLUMNS = 6
-CHANNELS = 5 # [connection, series, parallel, ground, +ve]
-# TODO: separate ground and +ve channels into another array
+CHANNELS = 3 # [connection, series, parallel]
+TERMINALS = 2 # [ground, +ve]
 
-#%% embedding creation
-# ground and +ve channels are entirely True or False
-def create_empty_embedding(rows, columns, channels):
-    embedding = np.zeros((rows, columns, rows, columns, channels), dtype=bool)
-    return embedding
-
-def make_connection(embedding, r1, c1, r2, c2, connection_type):
-    if connection_type == 's':
-        embedding[r1, c1, r2, c2, 0] = True
-        embedding[r2, c2, r1, c1, 0] = True
-        embedding[r1, c1, r2, c2, 1] = True
-        embedding[r2, c2, r1, c1, 1] = True
-    elif connection_type == 'p':
-        embedding[r1, c1, r2, c2, 0] = True
-        embedding[r2, c2, r1, c1, 0] = True
-        embedding[r1, c1, r2, c2, 2] = True
-        embedding[r2, c2, r1, c1, 2] = True
-    return embedding
-
-def connect_to_ground(embedding, r, c):
-    embedding[r,c,:,:,3] = True
-    return embedding
-
-def connect_to_pos(embedding, r, c):
-    embedding[r,c,:,:,4] = True
-    return embedding
+#%% CircuitEmbedding object definition
+class CircuitEmbedding():
+    
+    def __init__(self, rows, columns, channels = 3, terminals = 2):
+        self.rows = rows
+        self.columns = columns
+        self.channels = channels
+        self.terminals = terminals
+        
+        self.create_empty_embedding()
+    
+    def __str__(self):
+        pass
+        
+    def create_empty_embedding(self):
+        embedding = np.zeros((self.rows, self.columns, self.rows, self.columns,\
+                              self.channels), dtype=bool)
+        terminal_array = np.zeros((self.rows, self.columns, self.terminals),\
+                                  dtype=bool)
+        self.embedding = embedding
+        self.terminal_array = terminal_array
+    
+    def make_connection(self, r1, c1, r2, c2, connection_type):
+        if connection_type == 's':
+            self.embedding[r1, c1, r2, c2, 0] = True
+            self.embedding[r2, c2, r1, c1, 0] = True
+            self.embedding[r1, c1, r2, c2, 1] = True
+            self.embedding[r2, c2, r1, c1, 1] = True
+        elif connection_type == 'p':
+            self.embedding[r1, c1, r2, c2, 0] = True
+            self.embedding[r2, c2, r1, c1, 0] = True
+            self.embedding[r1, c1, r2, c2, 2] = True
+            self.embedding[r2, c2, r1, c1, 2] = True
+    
+    def connect_to_ground(self, r, c):
+        self.terminal_array[r, c, 0] = True
+    
+    def connect_to_pos(self, r, c):
+        self.terminal_array[r, c, 1] = True
  
-#%% validation function
-def check_embedding(embedding):
-    # Cells cannot have a True connection value to themselves
-    # The reverse connection should be the same type
-    # Cannot have both a series and parallel connection simultaneously
-    # gnd and +ve terminals must have completely True or False dimensions
-    rows, columns = embedding.shape[0], embedding.shape[1]
-    for r in range(rows):
-        for c in range(columns):
-            if embedding[r,c,r,c,0] == True:
-                return "Invalid embedding: The cell cannot have a connection"\
-                    + " to itself. Error occured at " + str(r) + str(c)
-            if embedding[r,c,r,c,1] == True:
-                return "Invalid embedding: The cell cannot have a connection"\
-                    + " to itself. Error occured at " + str(r) + str(c)
-            if embedding[r,c,r,c,2] == True:
-                return "Invalid embedding: The cell cannot have a connection"\
-                    + " to itself. Error occured at " + str(r) + str(c)
-            # TODO: allow series + none, parallel + none connections
-            for r1 in range(rows):
-                for c1 in range(columns):
-                    if embedding[r, c, r1, c1, 0] != embedding[r1, c1, r, c, 0]:
-                        return "Invalid embedding: The reverse connection"\
-                            + "must be the same. Error occured between " + \
-                                " ".join([r,c,r1,c1])
-                                
-                    if embedding[r, c, r1, c1, 1] != embedding[r1, c1, r, c, 1]:
-                        return "Invalid embedding: The reverse connection"\
-                            + "must be the same. Error occured between " + \
-                                " ".join([r,c,r1,c1])
-                                
-                    if embedding[r, c, r1, c1, 2] != embedding[r1, c1, r, c, 2]:
-                        return "Invalid embedding: The reverse connection"\
-                            + "must be the same. Error occured between " + \
-                                " ".join([r,c,r1,c1])
-                        
-                    if embedding[r,c,r1,c1,0] == False:
-                        if embedding[r,c,r1,c1,1] == True or embedding[r,c,r1,c1,2] == True:
-                            return "Invalid embedding: No connection + some connection "\
-                                + "is invalid. Error occured at " + str(r) + str(c)
-
-                    if embedding[r,c,r1,c1,0] == True:
-                        if embedding[r,c,r1,c1,1] == False and embedding[r,c,r1,c1,2] == False:
-                            return "Invalid embedding: Some connection + no connection "\
-                                + "is invalid. Error occured at " + str(r) + str(c)
-    return "Valid"
-#array[6,10,3,3,1] = True
+    def check_embedding(self):
+        # Cells cannot have a True connection value to themselves
+        # The reverse connection should be the same type
+        # Cannot have both a series and parallel connection simultaneously
+        # gnd and +ve terminals must have completely True or False dimensions
+        for r in range(self.rows):
+            for c in range(self.columns):
+                if self.embedding[r,c,r,c,0] == True:
+                    return "Invalid embedding: The cell cannot have a connection"\
+                        + " to itself. Error occured at " + str(r) + str(c)
+                if self.embedding[r,c,r,c,1] == True:
+                    return "Invalid embedding: The cell cannot have a connection"\
+                        + " to itself. Error occured at " + str(r) + str(c)
+                if self.embedding[r,c,r,c,2] == True:
+                    return "Invalid embedding: The cell cannot have a connection"\
+                        + " to itself. Error occured at " + str(r) + str(c)
+                for r1 in range(self.rows):
+                    for c1 in range(self.columns):
+                # connection between two cells cannot be series & parallel
+                        if self.embedding[r,c,r1,c1,1] and self.embedding[r,c,r1,c1,2] == True:
+                            return "Invalid embedding: Connection between two"\
+                                + "cells cannot be both series and parallel."\
+                                + "Error occurred at " + " ".join([r,c,r1,c1])
+                # reverse connection can be different, so long as it is not 
+                # simultaneously series and parallel.
+                # If series or parallel connection is made, check that the
+                # reverse connection (but opposite type) is not also True. 
+                        if True in self.embedding[r,c,r1,c1,1:]:
+                            if self.embedding[r,c,r1,c1,1] == True and self.embedding[r1,c1,r,c,2] == True:
+                                return "Invalid embedding: Connection"\
+                                    + "has to be the same type as its reverse."\
+                                    + "Error occurred at " + " ".join([r,c,r1,c1])
+                            if self.embedding[r,c,r1,c1,2] == True and self.embedding[r1,c1,r,c,1] == True:
+                                return "Invalid embedding: Connection"\
+                                    + "has to be the same type as its reverse."\
+                                    + "Error occurred at " + " ".join([r,c,r1,c1])                
+        return True
 
 #%% Convetional series module
 def series_embedding(rows, columns, channels):
-    embedding = create_empty_embedding(rows, columns, channels)
+    embedding = CircuitEmbedding(rows, columns, channels)
     
     for r in range(rows):
         if r % 2 == 0:
             for c in range(columns):
                 if r == 0 and c == 0:
                     # top-left cell connected to gnd
-                    connect_to_ground(embedding, r, c)
-                    make_connection(embedding, r, c, r, c+1, 's')
+                    embedding.connect_to_ground(r, c)
+                    embedding.make_connection(r, c, r, c+1, 's')
                 elif r == rows - 1 and c == columns - 1:
                     # make final connection to +ve terminal
-                    connect_to_pos(embedding, r, c)
+                    embedding.connect_to_pos(r, c)
                 elif c == columns - 1:
                     # if at the right end, make connection with cell below
-                    make_connection(embedding, r, c, r + 1, c, 's')
+                    embedding.make_connection(r, c, r+1, c, 's')
                 else:
                     # cell to its right is connected in series
-                    make_connection(embedding, r, c, r, c+1, 's')
+                    embedding.make_connection(r, c, r, c+1, 's')
         elif r % 2 == 1:
             for c in range(columns - 1, -1, -1):
                 if r == rows - 1 and c == 0:
                     # make final connection to +ve terminal
-                    connect_to_pos(embedding, r, c)
+                    embedding.connect_to_pos(r, c)
                 elif c == 0:
                     # make connection to row below
-                    make_connection(embedding, r, c, r + 1, c, 's')
+                    embedding.make_connection(r, c, r+1, c, 's')
                 else:
-                    make_connection(embedding, r, c, r, c-1, 's')
+                    embedding.make_connection(r, c, r, c-1, 's')
     return embedding
 
-array = series_embedding(ROWS, COLUMNS, CHANNELS)  
+#array = series_embedding(ROWS, COLUMNS, CHANNELS)  
 
 #%% Total-cross-tied module
 def tct_embedding(rows, columns, channels):
-    embedding = create_empty_embedding(rows, columns, channels)
-    for c in range(columns):
-        for r in range(rows):
+    embedding = CircuitEmbedding(rows, columns, channels)
+    for c in range(embedding.columns):
+        for r in range(embedding.rows):
             # column to the right is all 1's (series)
-            if c != columns - 1:
-                make_connection(embedding, r, c, r, c+1, 's')
+            if c != embedding.columns - 1:
+                embedding.make_connection(r, c, r, c+1, 's')
             if r != rows - 1:
-                make_connection(embedding, r, c, r+1, c, 'p')
+                embedding.make_connection(r, c, r+1, c, 'p')
         
     return embedding
     
