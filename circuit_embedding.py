@@ -17,8 +17,8 @@ from solar_module import SolarModule
 
 ####################################################################################################
 #%% embedding dimensions 
-ROWS = 10
-COLUMNS = 6
+ROWS = 3
+COLUMNS = 3
 CHANNELS = 3 # [connection, series, parallel]
 TERMINALS = 2 # [ground, +ve]
 
@@ -97,7 +97,12 @@ class CircuitEmbedding():
                             if self.embedding[r,c,r1,c1,2] == True and self.embedding[r1,c1,r,c,1] == True:
                                 return "Invalid embedding: Connection"\
                                     + "has to be the same type as its reverse."\
-                                    + "Error occurred at " + " ".join([r,c,r1,c1])                
+                                    + "Error occurred at " + " ".join([r,c,r1,c1])   
+                                    
+        def store_as_text(self):
+            # store as json file
+            pass
+        
         return True
 
 #%% Convetional series module
@@ -132,7 +137,7 @@ def series_embedding(rows, columns):
                     embedding.make_connection(r, c, r, c-1, 's')
     return embedding
 
-#array = series_embedding(ROWS, COLUMNS, CHANNELS)  
+array = series_embedding(ROWS, COLUMNS)  
 
 #%% Total-cross-tied module
 def tct_embedding(rows, columns):
@@ -162,18 +167,62 @@ sun = np.full((ROWS, COLUMNS), 10)
 
 def make_netlist(embedding, shading_map):
     # use separator
+    
+    if embedding.check_embedding() != True:
+        return "Invalid embedding."
+    
     circuit = Circuit('Netlist')
     rows, columns = embedding.rows, embedding.columns
+    
+    node_dictionary = {}
+    
     for r in range(rows):
         for c in range(columns):
             circuit.subcircuit(SolarCell(str(r) + '-' + str(c), \
                                 intensity=shading_map[r,c]))
+            node_dictionary[str(r) + '-' + str(c)] = [None, None]       
+    
+    ground_connections = embedding.terminal_array[:,:,0]
+    pos_connections = embedding.terminal_array[:,:,0]
     
     for r in range(rows):
         for c in range(columns):
-            # make netlist
-            pass
-    return circuit
+            if ground_connections[r,c] == True:
+                node_dictionary[str(r) + '-' + str(c)][0] = 'gnd'
+            if pos_connections[r,c] == True:
+                node_dictionary[str(r) + '-' + str(c)][1] = 'pos'
+    
+    connection_dictionary = {}
+    
+    for r1 in range(rows):
+        for c1 in range(columns):
+            
+            series_array = embedding.embedding[r1,c1,...,1]
+            for r2 in range(rows):
+                for c2 in range(columns):
+                    if series_array[r2, c2] == True:
+                        cell_tuple = ("-".join([str(r1),str(c1)]),\
+                                      "-".join([str(r2),str(c2)]))
+                        cell_tuple = tuple(sorted(cell_tuple))
+                        
+                        connection_dictionary[cell_tuple] = 's'
+            
+            parallel_array = embedding.embedding[r1,c1,...,2]
+            for r2 in range(rows):
+                for c2 in range(columns):
+                    if parallel_array[r2, c2] == True:
+                        cell_tuple = ("-".join([str(r1),str(c1)]),\
+                                      "-".join([str(r2),str(c2)]))
+                        cell_tuple = tuple(sorted(cell_tuple))
+                        connection_dictionary[cell_tuple] = 'p'
+                        
+    # now iterate over connection_dictionary, updating nodes of each cell 
+    node_counter = 97
+    node_name_multiplier = 1
+    # 'a' through 'z', then 'aa', then 'aaa', so on
+    print(node_dictionary)
 
-c = make_netlist(array, sun)
+    return connection_dictionary, circuit
+
+dct, c = make_netlist(array, sun)
 # TODO: topology to netlist
