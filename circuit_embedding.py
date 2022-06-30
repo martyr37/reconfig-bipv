@@ -18,8 +18,8 @@ from solar_module import SolarModule
 
 ####################################################################################################
 #%% embedding dimensions 
-ROWS = 3
-COLUMNS = 3
+ROWS = 10
+COLUMNS = 6
 CHANNELS = 3 # [connection, series, parallel]
 TERMINALS = 2 # [ground, +ve]
 
@@ -223,16 +223,15 @@ def make_netlist(embedding, shading_map):
     # loop until all the cells have nodes filled
     def get_node_name(counter):
         char_no = counter % 26
-        char = chr(char_no + 96)
-        multiplier = int((counter + 1)/ 26) + 1
+        char = chr(char_no + 97)
+        multiplier = int((counter)/ 26) + 1
         return char * multiplier
     
     global node_counter
-    node_counter = 1
-    
-    # do all the parallel connections first, to reduce ambiguous nodes
-    just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))
-    for connection in just_parallel:
+    node_counter = 0
+    def parallel_connect(connection):
+        global node_counter
+        global node_dict
         cell1 = connection[0]
         cell2 = connection[1]
         node11 = node_dict[cell1][0]
@@ -268,10 +267,6 @@ def make_netlist(embedding, shading_map):
             node_dict[cell1][1] = get_node_name(node_counter)
             node_dict[cell2][1] = get_node_name(node_counter)
             node_counter += 1
-    just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
-    # now do series connections and by process of elimination figure out
-    # directionality of series connections  
-    
     def series_connect(connection):
         global node_counter
         global node_dict
@@ -308,18 +303,25 @@ def make_netlist(embedding, shading_map):
             node_dict[cell1][0] = get_node_name(node_counter)
             node_dict[cell2][1] = get_node_name(node_counter)
             node_counter += 1
-        
-    for connection in just_series: 
-        series_connect(connection)
     
-    while any(None in pair for pair in list(node_dict.values())):
-        for cell in node_dict:
-            if None in node_dict[cell]:
-                connection_subset = dict\
-                    (filter(lambda x: cell in x[0], connection_dict.items()))
-                for redo in connection_subset:
-                    series_connect(redo)
-                    break
+    #just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
+    #just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))
+    
+    while connection_dict != {}:
+        cdictcopy = connection_dict.copy()
+        for connection, ctype in cdictcopy.items(): 
+            c1, c2 = connection[0], connection[1]
+            # if all four nodes empty, continue
+            if node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
+                continue
+            elif ctype == 's':
+                series_connect(connection)
+                connection_dict.pop(connection)
+            elif ctype == 'p':
+                parallel_connect(connection)
+                connection_dict.pop(connection)
+                
+    # transfer node_dict to PySpice netlist
     line = 0            
     for cell in node_dict:
         if node_dict[cell][0] == 'gnd':
@@ -332,8 +334,7 @@ def make_netlist(embedding, shading_map):
 c = make_netlist(array, sun)
 
 #%% Plot netlist
-
-def plot_netlist(netlist):
+def plot_netlist(netlist, xmax=50, ymax=150, pv=False):
     netlist.V('input', netlist.gnd, 'pos', 0)
     print(netlist)
     simulator = netlist.simulator(temperature=25, nominal_temperature=25)
@@ -346,10 +347,14 @@ def plot_netlist(netlist):
     seriesVMP = seriesV[seriesP.argmax()]
     seriesIMP = seriesI[seriesP.argmax()]
     
-    plt.plot(seriesV, seriesI)
-    plt.xlim(0,60)
-    plt.ylim(0,100)
-    
+    if pv == False:
+        plt.plot(seriesV, seriesI)
+        plt.xlim(0,xmax)
+        plt.ylim(0,ymax)
+    elif pv == True:
+        plt.plot(seriesV, seriesP)
+        plt.xlim(0,xmax)
+        plt.ylim(0,ymax)
     print(seriesMPP)
 plot_netlist(c)
 
