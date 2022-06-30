@@ -8,6 +8,7 @@ Created on Tue May 17 12:23:35 2022
 
 ####################################################################################################
 import numpy as np
+import matplotlib.pyplot as plt
 
 import PySpice.Logging.Logging as Logging
 from PySpice.Spice.Netlist import Circuit, SubCircuit
@@ -15,47 +16,286 @@ from PySpice.Unit import *
 logger = Logging.setup_logging()
 
 from solar_cell import SolarCell
+from circuit_embedding import CircuitEmbedding
 
 ####################################################################################################
 
 #%% SolarModule
-class SolarModule():
+class SolarModule(CircuitEmbedding):
     """
     The SolarModule object will contain:
         
         - A data structure that will hold the information of all the cell 
-        interconnections also known as the circuit topology.
+        interconnections also known as the circuit embedding.
         - The Ngspice netlist that will be built according to the data structure
         - Methods to update the data structure and netlist accordingly
 
     A function that can create series, parallel, SP and TCT modules by calling
     an instance of SolarModule will be made after this class defintion.
+    
+    Class Attributes:
+        self.rows
+        self.columns
+        self.channels
+        self.terminals
+        self.embedding
+        self.terminal_array
+        self.shading_map
+        self.circuit
+        
+    Class Methods:
+        self.create_empty_embedding()
+        self.make_connection(r1, c1, r2, c2, connection_type)
+        self.connect_to_ground(r, c):
+        self.connect_to_pos(r, c):
+        self.check_embedding()
+        
     """
+    def __init__(self, rows, columns, channels = 3, terminals = 2,\
+                 shading_map = None):
+        CircuitEmbedding.__init__(self, rows, columns, channels, terminals)
+        
+        if shading_map == None:
+            self.shading_map = np.full((self.rows, self.columns), 10)
+        else:
+            self.shading_map = shading_map
+        
+        self.circuit = self.make_netlist()
+        
+    def series_embedding(self):        
+        for r in range(self.rows):
+            if r % 2 == 0:
+                for c in range(self.columns):
+                    if r == 0 and c == 0:
+                        # top-left cell connected to gnd
+                        self.connect_to_ground(r, c)
+                        self.make_connection(r, c, r, c+1, 's')
+                    elif r == self.rows - 1 and c == self.columns - 1:
+                        # make final connection to +ve terminal
+                        self.connect_to_pos(r, c)
+                    elif c == self.columns - 1:
+                        # if at the right end, make connection with cell below
+                        self.make_connection(r, c, r+1, c, 's')
+                    else:
+                        # cell to its right is connected in series
+                        self.make_connection(r, c, r, c+1, 's')
+            elif r % 2 == 1:
+                for c in range(self.columns - 1, -1, -1):
+                    if r == self.rows - 1 and c == 0:
+                        # make final connection to +ve terminal
+                        self.connect_to_pos(r, c)
+                    elif c == 0:
+                        # make connection to row below
+                        self.make_connection(r, c, r+1, c, 's')
+                    else:
+                        self.make_connection(r, c, r, c-1, 's')
 
-    def __init__(self):
-        pass
+    def tct_embedding(self):
+        for c in range(self.columns):
+            for r in range(self.rows):
+                # first column is connected to ground
+                if c == 0:
+                    self.connect_to_ground(r, c)
+                # last column is connected to +ve terminal
+                elif c == self.columns - 1:
+                    self.connect_to_pos(r,c)
+                # column to the right is all 1's (series)
+                if c != self.columns - 1:
+                    for r1 in range(self.rows):
+                        self.make_connection(r, c, r1, c+1, 's')
+                # cells below are all 2's (parallel)
+                for r1 in range(r + 1, self.rows):
+                    self.make_connection(r, c, r1, c, 'p')
     
-    def __repr__(self):
-        pass
-    
-    def circuit_topology(self):
-        pass
-    
-    def netlist(self):
-        pass
-    
-    def update_shading_map(self):
-        pass
-    
-    def plot_curves(self):
-        pass
-    
-    def get_mpp(self):
-        return self._mpp
+    def make_netlist(self):        
+        if self.check_embedding() != True:
+            raise ValueError("Invalid embedding.")
         
-    def set_mpp(self):
-        pass
-        #self._mpp = something
+        circuit = Circuit('Netlist')
         
-    # do the same thing for voc, isc, vmp, imp, FF.
+        global node_dict
+        node_dict = {}
+        
+        for r in range(self.rows):
+            for c in range(self.columns):
+                circuit.subcircuit(SolarCell(str(r) + '-' + str(c), \
+                                    intensity=self.shading_map[r,c]))
+                node_dict[str(r) + '-' + str(c)] = [None, None]       
+        
+        ground_connections = self.terminal_array[:,:,0]
+        pos_connections = self.terminal_array[:,:,1]
+        
+        for r in range(self.rows):
+            for c in range(self.columns):
+                if ground_connections[r,c] == True:
+                    node_dict[str(r) + '-' + str(c)][0] = 'gnd'
+                if pos_connections[r,c] == True:
+                    node_dict[str(r) + '-' + str(c)][1] = 'pos'
+        # creation of connection_dict
+        connection_dict = {}
+        for r1 in range(self.rows):
+            for c1 in range(self.columns):
+                
+                series_array = self.embedding[r1,c1,...,1]
+                for r2 in range(self.rows):
+                    for c2 in range(self.columns):
+                        if series_array[r2, c2] == True:
+                            cell_tuple = ("-".join([str(r1),str(c1)]),\
+                                          "-".join([str(r2),str(c2)]))
+                            cell_tuple = tuple(sorted(cell_tuple))
+                            
+                            connection_dict[cell_tuple] = 's'
+                
+                parallel_array = self.embedding[r1,c1,...,2]
+                for r2 in range(self.rows):
+                    for c2 in range(self.columns):
+                        if parallel_array[r2, c2] == True:
+                            cell_tuple = ("-".join([str(r1),str(c1)]),\
+                                          "-".join([str(r2),str(c2)]))
+                            cell_tuple = tuple(sorted(cell_tuple))
+                            connection_dict[cell_tuple] = 'p'
+                            
+        # now iterate over connection_dictionary, updating nodes of each cell 
+        # 'a' through 'z', then 'aa', then 'aaa', so on
+        # loop until all the cells have nodes filled
+        def get_node_name(counter):
+            char_no = counter % 26
+            char = chr(char_no + 97)
+            multiplier = int((counter)/ 26) + 1
+            return char * multiplier
+        
+        global node_counter
+        node_counter = 0
+        def parallel_connect(connection):
+            global node_counter
+            global node_dict
+            cell1 = connection[0]
+            cell2 = connection[1]
+            node11 = node_dict[cell1][0]
+            node12 = node_dict[cell1][1]
+            node21 = node_dict[cell2][0]
+            node22 = node_dict[cell2][1]
+            
+            # if cell 1's input is ground, then cell 2's input is also ground
+            if node11 == 'gnd':
+                node_dict[cell2][0] = node11
+            # if cell 2's input is ground, then cell 1's input is also ground
+            elif node21 == 'gnd':
+                node_dict[cell1][0] = node21
+            elif node11 != None:
+                node_dict[cell2][0] = node11
+            elif node21 != None:
+                node_dict[cell1][0] = node21
+            else:
+                node_dict[cell1][0] = get_node_name(node_counter)
+                node_dict[cell2][0] = get_node_name(node_counter)
+                node_counter += 1
+            # if cell 1's output is pos, then cell 2's output is also pos
+            if node12 == 'pos':
+                node_dict[cell2][1] = node12
+            # if cell 2's output is pos, then cell 1's output is also pos
+            elif node22 == 'pos':
+                node_dict[cell1][1] = node22
+            elif node12 != None:
+                node_dict[cell2][1] = node12
+            elif node22 != None:
+                node_dict[cell1][0] = node22
+            else:
+                node_dict[cell1][1] = get_node_name(node_counter)
+                node_dict[cell2][1] = get_node_name(node_counter)
+                node_counter += 1
+        def series_connect(connection):
+            global node_counter
+            global node_dict
+            cell1 = connection[0]
+            cell2 = connection[1]
+            node11 = node_dict[cell1][0]
+            node12 = node_dict[cell1][1]
+            node21 = node_dict[cell2][0]
+            node22 = node_dict[cell2][1]
+            
+            if node11 == 'gnd' or node22 == 'pos':
+                if node12 != None:
+                    node_dict[cell2][0] = node12
+                elif node21 != None:
+                    node_dict[cell1][1] = node21
+                else:
+                    node_dict[cell1][1] = get_node_name(node_counter)
+                    node_dict[cell2][0] = get_node_name(node_counter)
+                    node_counter += 1
+            elif node12 == 'pos' or node21 == 'gnd':
+                if node11 != None:
+                    node_dict[cell2][1] = node11
+                elif node22 != None:
+                    node_dict[cell1][0] = node22
+                else:
+                    node_dict[cell1][0] = get_node_name(node_counter)
+                    node_dict[cell2][1] = get_node_name(node_counter)
+                    node_counter += 1
+            elif (node11 != None and node12 == None) or (node21 == None and node22 != None):
+                node_dict[cell1][1] = get_node_name(node_counter)
+                node_dict[cell2][0] = get_node_name(node_counter)
+                node_counter += 1
+            elif (node11 == None and node12 != None) or (node21 != None and node22 == None):
+                node_dict[cell1][0] = get_node_name(node_counter)
+                node_dict[cell2][1] = get_node_name(node_counter)
+                node_counter += 1
+        
+        #just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
+        #just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))
+        
+        while connection_dict != {}:
+            cdictcopy = connection_dict.copy()
+            for connection, ctype in cdictcopy.items(): 
+                c1, c2 = connection[0], connection[1]
+                # if all four nodes empty, continue
+                if node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
+                    continue
+                elif ctype == 's':
+                    series_connect(connection)
+                    connection_dict.pop(connection)
+                elif ctype == 'p':
+                    parallel_connect(connection)
+                    connection_dict.pop(connection)
+                    
+        # transfer node_dict to PySpice netlist
+        line = 0            
+        for cell in node_dict:
+            if node_dict[cell][0] == 'gnd':
+                circuit.X("line" + str(line), cell, circuit.gnd, node_dict[cell][1])
+            else:
+                circuit.X("line" + str(line), cell, node_dict[cell][0], node_dict[cell][1])
+            line += 1
+        self.circuit = circuit
+        
+    def simulate(self):
+        self.circuit.V('input', self.circuit.gnd, 'pos', 0)
+        simulator = self.circuit.simulator(temperature=25, nominal_temperature=25)
+        analysis = simulator.dc(Vinput=slice(0,50,0.01))
+
+        self.I = np.array(analysis.Vinput)
+        self.V = np.array(analysis.sweep)
+        self.P = self.I * self.V
+        self.MPP = max(self.P)
+        self.VMP = self.V[self.P.argmax()]
+        self.IMP = self.I[self.P.argmax()]
+        #TODO: Add VOC, ISC, FF
+        
+    def plot_netlist(self, xmax=50, ymax=150, pv=False):
+        if pv == False:
+            plt.plot(self.V, self.I)
+            plt.xlim(0,xmax)
+            plt.ylim(0,ymax)
+        elif pv == True:
+            plt.plot(self.V, self.P)
+            plt.xlim(0,xmax)
+            plt.ylim(0,ymax)
+    
+#%% testing
+obj = SolarModule(10, 6)
+#obj.series_embedding()
+obj.tct_embedding()
+obj.make_netlist()
+obj.simulate()
+obj.plot_netlist()
  
