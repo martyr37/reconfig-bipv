@@ -86,7 +86,8 @@ class CircuitEmbedding():
                         if self.embedding[r,c,r1,c1,1] and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
                                 + "cells cannot be both series and parallel."\
-                                + "Error occurred at " + " ".join([r,c,r1,c1])
+                                + "Error occurred at " + str(r) + str(c)\
+                                + str(r1) + str(c1)
                 # reverse connection can be different, so long as it is not 
                 # simultaneously series and parallel.
                 # If series or parallel connection is made, check that the
@@ -95,9 +96,11 @@ class CircuitEmbedding():
                             if self.embedding[r,c,r1,c1,1] == True and self.embedding[r1,c1,r,c,2] == True:
                                 return "Invalid embedding: Connection"\
                                     + "has to be the same type as its reverse."\
-                                    + "Error occurred at " + " ".join([r,c,r1,c1])
+                                    + "Error occurred at " + str(r1) + str(c1)\
+                                    + str(r2) + str(c2)
                             if self.embedding[r,c,r1,c1,2] == True and self.embedding[r1,c1,r,c,1] == True:
                                 return "Invalid embedding: Connection"\
                                     + "has to be the same type as its reverse."\
-                                    + "Error occurred at " + " ".join([r,c,r1,c1])   
+                                    + "Error occurred at " + str(r1) + str(c1)\
+                                    + str(r2) + str(c2) 
         return True

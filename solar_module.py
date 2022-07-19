@@ -62,6 +62,9 @@ class SolarModule(CircuitEmbedding):
         
         self.circuit = self.make_netlist()
         
+    def __str__(self):
+        return "Module of size " + str(self.rows) + ' x ' + str(self.columns)
+        
     def series_embedding(self):        
         for r in range(self.rows):
             if r % 2 == 0:
@@ -250,7 +253,7 @@ class SolarModule(CircuitEmbedding):
                 c1, c2 = connection[0], connection[1]
                 # if all four nodes empty, continue
                 if node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
-                    continue
+                    continue # TODO: Fix infinite loop
                 elif ctype == 's':
                     series_connect(connection)
                     connection_dict.pop(connection)
@@ -267,6 +270,8 @@ class SolarModule(CircuitEmbedding):
                 circuit.X("line" + str(line), cell, node_dict[cell][0], node_dict[cell][1])
             line += 1
         self.circuit = circuit
+        self.connection_dict = connection_dict
+        self.node_dict = node_dict
         
     def simulate(self):
         self.circuit.V('input', self.circuit.gnd, 'pos', 0)
@@ -291,11 +296,27 @@ class SolarModule(CircuitEmbedding):
             plt.xlim(0,xmax)
             plt.ylim(0,ymax)
     
+    def imshow(self, r, c, connection_type=None):
+        if connection_type == None:
+            plt.imshow(self.embedding[r,c,...,0])
+        elif connection_type == 's':
+            plt.imshow(self.embedding[r,c,...,1])
+        elif connection_type == 'p':
+            plt.imshow(self.embedding[r,c,...,2])
+        else:
+            raise ValueError("connection type should be 's' or 'p'")
+    
 #%% testing
+"""
 obj = SolarModule(10, 6)
 #obj.series_embedding()
 obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
-obj.plot_netlist()
+#obj.plot_netlist()
+obj.imshow(3, 3)
+obj.imshow(3, 3, 's')
+"""
+
+
  
