@@ -202,7 +202,7 @@ class SolarModule(CircuitEmbedding):
             elif node12 != None:
                 node_dict[cell2][1] = node12
             elif node22 != None:
-                node_dict[cell1][0] = node22
+                node_dict[cell1][1] = node22
             else:
                 node_dict[cell1][1] = get_node_name(node_counter)
                 node_dict[cell2][1] = get_node_name(node_counter)
@@ -243,16 +243,40 @@ class SolarModule(CircuitEmbedding):
                 node_dict[cell1][0] = get_node_name(node_counter)
                 node_dict[cell2][1] = get_node_name(node_counter)
                 node_counter += 1
+            elif (node11 != None and node12 != None) and (node21 == None and node22 == None):
+                if node11 > node12:
+                    node_dict[cell2][1] = node11
+                    node_dict[cell2][0] = get_node_name(node_counter)
+                    node_counter += 1
+                elif node12 > node11:
+                    node_dict[cell2][0] = node12
+                    node_dict[cell2][1] = get_node_name(node_counter)
+                    node_counter += 1
+            elif (node21 != None and node22 != None) and (node11 == None and node12 == None):
+                if node21 > node22:
+                    node_dict[cell1][1] = node21
+                    node_dict[cell2][0] = get_node_name(node_counter)
+                    node_counter += 1
+                elif node22 > node21:
+                    node_dict[cell1][0] = node22
+                    node_dict[cell1][1] = get_node_name(node_counter)
+                    node_counter += 1
         
         #just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
         #just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))
-        
+        loop_counter = 0
         while connection_dict != {}:
             cdictcopy = connection_dict.copy()
             for connection, ctype in cdictcopy.items(): 
                 c1, c2 = connection[0], connection[1]
                 # if all four nodes empty, continue
-                if node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
+                if loop_counter == len(cdictcopy):
+                    # do parallel connections once all exhausted
+                    if ctype == 'p':
+                        parallel_connect(connection)
+                        connection_dict.pop(connection)
+                elif node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
+                    loop_counter += 1
                     continue # TODO: Fix infinite loop
                 elif ctype == 's':
                     series_connect(connection)
@@ -260,6 +284,7 @@ class SolarModule(CircuitEmbedding):
                 elif ctype == 'p':
                     parallel_connect(connection)
                     connection_dict.pop(connection)
+                loop_counter = 0
                     
         # transfer node_dict to PySpice netlist
         line = 0            
@@ -313,9 +338,9 @@ obj = SolarModule(10, 6)
 obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
-#obj.plot_netlist()
-obj.imshow(3, 3)
-obj.imshow(3, 3, 's')
+obj.plot_netlist()
+#obj.imshow(3, 3)
+#obj.imshow(3, 3, 's')
 """
 
 

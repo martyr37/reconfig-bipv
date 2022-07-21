@@ -22,8 +22,8 @@ import re
 
 ####################################################################################################
 
-#test_string = '-12+-3435+-7045928443+-622203735365245563428240211133000151442590+-23819371943083521514746485919531(5441100561)60751372(80200232)(0450)+'
-test_string = '-3354053262234364131491857283758265706010735502+-80613431049071632101157445535293001122510324944020844250951244924125358130+'
+test_string = '-2514741175344431+-543355152492503270437323945235(81206402800445000593605141034290)958284015312(8363612221726265)+-85(30911340)(7110)+'
+#test_string = '-3354053262234364131491857283758265706010735502+-80613431049071632101157445535293001122510324944020844250951244924125358130+'
 
 def string_to_embedding(rows, columns, string):
     moduleobj = SolarModule(rows, columns)
@@ -63,6 +63,7 @@ def string_to_embedding(rows, columns, string):
                     moduleobj.connect_to_ground(r1, c1)
                 connect_to_ground = False
             in_brackets = False
+            previous_cell = ''
             
         elif char.isnumeric() == True: # if current character is a number
             if cell == '':
@@ -89,10 +90,11 @@ def string_to_embedding(rows, columns, string):
                                                               ri, ci, rj, cj, 's')
                     # connect cell in series to all in brackets '...22(3344)'
                     # 22 should be in series with 33 and 44
-                    if previous_cell != '': # TODO: Fix if previous series cell
-                    # is before another set of brackets (should ignore)
+                    if previous_cell != '':
                         r1, c1 = int(previous_cell[0]), int(previous_cell[1])
-                        moduleobj.make_connection(r, c, r1, c1, 's')
+                        for element in elements:
+                            r2, c2 = int(element[0]), int(element[1])
+                            moduleobj.make_connection(r1, c1, r2, c2, 's')
                         previous_cell = ''
                     # connect cells in brackets to each other in parallel
                     # (3344), 33 and 44 in parallel
@@ -128,7 +130,5 @@ def string_to_embedding(rows, columns, string):
     return moduleobj
                     
 obj = string_to_embedding(10, 6, test_string)
-        
-                
-    
+obj.make_netlist()
     
