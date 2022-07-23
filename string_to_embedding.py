@@ -130,10 +130,10 @@ def string_to_embedding(rows, columns, string):
                     
     return moduleobj
 
-obj = string_to_embedding(10, 6, test_string)
-obj.make_netlist()
-obj.simulate()
-obj.plot_netlist()
+#obj = string_to_embedding(10, 6, test_string)
+#obj.make_netlist()
+#obj.simulate()
+#obj.plot_netlist()
 #%% generate_string function (copy-pasted)
 def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 0):
     cell_ids = []
@@ -198,7 +198,7 @@ def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 
     return out
 
 #%% Function testing
-"""
+
 string_list = []
 for x in range(20):
     string = generate_string(6, 10)
@@ -207,5 +207,5 @@ for x in range(20):
     obj.make_netlist()
     obj.simulate()
     obj.plot_netlist()
-"""
+
 # TODO: Check netlists are actually connecting correctly by comparing with strings
