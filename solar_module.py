@@ -294,13 +294,18 @@ class SolarModule(CircuitEmbedding):
     
     def imshow(self, r, c, connection_type=None):
         if connection_type == None:
-            plt.imshow(self.embedding[r,c,...,0])
+            plt.imshow(self.embedding[r,c,...,0] | self.embedding[r,c,...,1]\
+                       | self.embedding[r,c,...,2])
         elif connection_type == 's':
+            plt.imshow(self.embedding[r,c,...,0] | self.embedding[r,c,...,1])
+        elif connection_type == 's1':
+            plt.imshow(self.embedding[r,c,...,0])
+        elif connection_type == 's2':
             plt.imshow(self.embedding[r,c,...,1])
         elif connection_type == 'p':
             plt.imshow(self.embedding[r,c,...,2])
         else:
-            raise ValueError("connection type should be 's' or 'p'")
+            raise ValueError("connection type should be 's', 's1', 's2', or 'p'")
     
 #%% testing
 """
