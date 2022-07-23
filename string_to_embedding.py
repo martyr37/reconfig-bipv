@@ -18,11 +18,12 @@ logger = Logging.setup_logging()
 from solar_module import SolarModule
 from circuit_embedding import CircuitEmbedding
 
-import re
+import regex as re
+import random
 
 ####################################################################################################
 
-test_string = '-2514741175344431+-543355152492503270437323945235(81206402800445000593605141034290)958284015312(8363612221726265)+-85(30911340)(7110)+'
+test_string = '-726002147505527370130091036423+-926283843233152110543590(71019325)113095208004426365(12824140504331858145442461947455533451)22+'
 #test_string = '-3354053262234364131491857283758265706010735502+-80613431049071632101157445535293001122510324944020844250951244924125358130+'
 
 def string_to_embedding(rows, columns, string):
@@ -128,7 +129,83 @@ def string_to_embedding(rows, columns, string):
             return "Error - Invalid character " + char
                     
     return moduleobj
-                    
+
 obj = string_to_embedding(10, 6, test_string)
+#%%
 obj.make_netlist()
+
+#%% generate_string function (copy-pasted)
+def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 0):
+    cell_ids = []
+    for row in range(start_row, rows + start_row):
+        for column in range(start_col, columns + start_col):
+            cell_ids.append(str(row) + str(column))
     
+    l_bracket = '('
+    r_bracket = ')'
+    
+    if adjacent == False:
+        random.shuffle(cell_ids) # shuffle cell order
+            
+    maximum_brackets = int((columns * rows) / 2) #TODO: Change to variable
+    number_of_brackets = random.randint(0, maximum_brackets) 
+    for x in range(0, number_of_brackets):
+        if x == 0:
+            inserting_index = random.randint(0, len(cell_ids) - 2)
+            cell_ids.insert(inserting_index, l_bracket)
+            rb_inserting_index = random.randint(inserting_index + 3, len(cell_ids))
+            cell_ids.insert(rb_inserting_index, r_bracket)
+        else:
+            inserting_index = random.randint(rb_inserting_index + 1, len(cell_ids) - 2) # ensuring next set of brackets is after the last
+            cell_ids.insert(inserting_index, l_bracket)
+            rb_inserting_index = random.randint(inserting_index + 3, len(cell_ids))
+            cell_ids.insert(rb_inserting_index, r_bracket) 
+        
+        sliced_cell_ids = cell_ids[rb_inserting_index + 1:]
+        if len(sliced_cell_ids) < 2:
+            break
+        
+    pm = '+-'
+    
+    maximum_pms = max(columns, rows) - 1 #TODO: Change to variable
+    
+    number_of_pms = random.randint(0, maximum_pms)
+    
+    for x in range(0, number_of_pms):
+        random_index = random.randint(0, len(cell_ids))
+        sliced_cell_ids = cell_ids[:random_index]
+        number_of_l_brackets = sliced_cell_ids.count(l_bracket)
+        number_of_r_brackets = sliced_cell_ids.count(r_bracket)
+        if number_of_l_brackets == number_of_r_brackets:
+            cell_ids.insert(random_index, pm)
+    
+    cell_ids.insert(0, '-')
+    cell_ids.append('+')
+    
+    pattern1 = re.compile(r'(?<=^-.*)(?:\+-)+(?=\+$)') # delete excess trailing +- 
+    pattern2 = re.compile(r'(?<=^-)(?:\+-)+(?=.*$)') # delete excess leading +-
+    pattern3 = re.compile(r'(\+-)+(?=(\+-)+)') # delete excess +- in middle of string
+    out = re.sub(pattern1, '', "".join(cell_ids))
+    out = re.sub(pattern2, '', out)
+    out = re.sub(pattern3, '', out)
+    """
+    try:
+        interconnection("".join(cell_ids), columns, rows, uniform_shading(rows, columns))
+        return "".join(cell_ids)
+    except:
+        generate_string(columns, rows)
+    """
+    return out
+
+#%% Function testing
+"""
+string_list = []
+for x in range(20):
+    string = generate_string(6, 10)
+    string_list.append(string)
+    obj = string_to_embedding(10, 6, string)
+    obj.make_netlist()
+    obj.simulate()
+    obj.plot_netlist()
+"""
+# TODO: Check netlists are actually connecting correctly by comparing with strings

@@ -17,7 +17,6 @@ logger = Logging.setup_logging()
 
 from solar_cell import SolarCell
 from circuit_embedding import CircuitEmbedding
-
 ####################################################################################################
 
 #%% SolarModule
@@ -216,7 +215,7 @@ class SolarModule(CircuitEmbedding):
             node12 = node_dict[cell1][1]
             node21 = node_dict[cell2][0]
             node22 = node_dict[cell2][1]
-            
+            # ground or positive connection - only choice
             if node11 == 'gnd' or node22 == 'pos':
                 if node12 != None:
                     node_dict[cell2][0] = node12
@@ -243,6 +242,7 @@ class SolarModule(CircuitEmbedding):
                 node_dict[cell1][0] = get_node_name(node_counter)
                 node_dict[cell2][1] = get_node_name(node_counter)
                 node_counter += 1
+            """
             elif (node11 != None and node12 != None) and (node21 == None and node22 == None):
                 if node11 > node12:
                     node_dict[cell2][1] = node11
@@ -261,11 +261,11 @@ class SolarModule(CircuitEmbedding):
                     node_dict[cell1][0] = node22
                     node_dict[cell1][1] = get_node_name(node_counter)
                     node_counter += 1
+            """
+        # no ordering of connections
         
-        #just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
-        #just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))
         loop_counter = 0
-        while connection_dict != {}:
+        while connection_dict != {} and loop_counter < len(connection_dict):
             cdictcopy = connection_dict.copy()
             for connection, ctype in cdictcopy.items(): 
                 c1, c2 = connection[0], connection[1]
@@ -279,13 +279,65 @@ class SolarModule(CircuitEmbedding):
                     loop_counter += 1
                     continue # TODO: Fix infinite loop
                 elif ctype == 's':
-                    series_connect(connection)
+                    if node_dict[c1] == [None, None]:
+                        # ['a', 'b'] and [None, None] should fail
+                        if node_dict[c2][0] != None and node_dict[c2][1] != None:
+                            loop_counter += 1
+                            continue
+                    if node_dict[c2] == [None, None]:
+                        if node_dict[c1][0] != None and node_dict[c1][1] != None:
+                            loop_counter += 1
+                            continue
+                    series_connect(connection) # popping without forming connection
                     connection_dict.pop(connection)
                 elif ctype == 'p':
                     parallel_connect(connection)
                     connection_dict.pop(connection)
                 loop_counter = 0
-                    
+        
+        """
+        # parallel then series connections
+        just_series = dict(filter(lambda x: x[1] == 's', connection_dict.items()))
+        just_parallel = dict(filter(lambda x: x[1] == 'p', connection_dict.items()))        
+        for connection in just_parallel:
+            parallel_connect(connection)
+            
+        loop_counter = 0
+        while just_series != {}:
+            cdictcopy = just_series.copy()
+            for connection in cdictcopy:
+                c1, c2 = connection[0], connection[1]
+                if node_dict[c1] == [None, None] and node_dict[c2] == [None, None]:
+                    loop_counter += 1
+                    continue
+                elif node_dict[c1] == [None, None]:
+                    # ['a', 'b'] and [None, None] should fail
+                    if node_dict[c2][0] != None and node_dict[c2][1] != None:
+                        loop_counter += 1
+                        continue
+                elif node_dict[c2] == [None, None]:
+                    if node_dict[c1][0] != None and node_dict[c1][1] != None:
+                        loop_counter += 1
+                        continue
+                
+                elif node_dict[c1] == [None, None] or node_dict[c2] == [None, None]:
+                    n1, n2 = node_dict[c1][0], node_dict[c1][1]
+                    n3, n4 = node_dict[c2][0], node_dict[c2][1]
+                    nlist = [n1, n2, n3, n4]
+                    # if there is (None, 'a') or ('a', None), proceed as normal
+                    if [n1, n2] == [None, None]:
+                        if n3 != None and n4 != None:
+                            continue
+                    elif [n3, n4] == [None, None]:
+                        if n1 != None and n2 != None:
+                            continue 
+                    # if there is gnd or pos, proceed as normal
+                    elif n1 != 'gnd' or n4 != 'pos':
+                        continue   
+                series_connect(connection)
+                just_series.pop(connection)
+        """
+        
         # transfer node_dict to PySpice netlist
         line = 0            
         for cell in node_dict:
@@ -334,8 +386,8 @@ class SolarModule(CircuitEmbedding):
 #%% testing
 """
 obj = SolarModule(10, 6)
-#obj.series_embedding()
-obj.tct_embedding()
+obj.series_embedding()
+#obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
 obj.plot_netlist()
