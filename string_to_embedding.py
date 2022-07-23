@@ -88,14 +88,14 @@ def string_to_embedding(rows, columns, string):
                                     ri, ci = int(i[0]), int(i[1])
                                     rj, cj = int(j[0]), int(j[1])
                                     moduleobj.make_connection(\
-                                                              ri, ci, rj, cj, 's')
+                                                              ri, ci, rj, cj, 's1')
                     # connect cell in series to all in brackets '...22(3344)'
                     # 22 should be in series with 33 and 44
                     if previous_cell != '':
                         r1, c1 = int(previous_cell[0]), int(previous_cell[1])
                         for element in elements:
                             r2, c2 = int(element[0]), int(element[1])
-                            moduleobj.make_connection(r1, c1, r2, c2, 's')
+                            moduleobj.make_connection(r1, c1, r2, c2, 's1')
                         previous_cell = ''
                     # connect cells in brackets to each other in parallel
                     # (3344), 33 and 44 in parallel
@@ -118,11 +118,11 @@ def string_to_embedding(rows, columns, string):
                         elements = [group[i:i+2] for i in range(0, len(group), 2)]
                         for element in elements:
                             r1, c1 = int(element[0]), int(element[1])
-                            moduleobj.make_connection(r, c, r1, c1, 's')
+                            moduleobj.make_connection(r, c, r1, c1, 's2')
                     # normal series connection e.g. 2233
                     elif previous_cell != '':
                         r1, c1 = int(previous_cell[0]), int(previous_cell[1])
-                        moduleobj.make_connection(r, c, r1, c1, 's')
+                        moduleobj.make_connection(r, c, r1, c1, 's2')
                 previous_cell = cell
                 cell = ''
         else:
@@ -131,9 +131,9 @@ def string_to_embedding(rows, columns, string):
     return moduleobj
 
 obj = string_to_embedding(10, 6, test_string)
-#%%
 obj.make_netlist()
-
+obj.simulate()
+obj.plot_netlist()
 #%% generate_string function (copy-pasted)
 def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 0):
     cell_ids = []

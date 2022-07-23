@@ -303,7 +303,7 @@ class SolarModule(CircuitEmbedding):
             raise ValueError("connection type should be 's' or 'p'")
     
 #%% testing
-
+"""
 obj = SolarModule(10, 6)
 obj.series_embedding()
 #obj.tct_embedding()
@@ -312,7 +312,7 @@ obj.simulate()
 obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
-
+"""
 
 
  
