@@ -361,7 +361,9 @@ class SolarModule(CircuitEmbedding):
         self.MPP = max(self.P)
         self.VMP = self.V[self.P.argmax()]
         self.IMP = self.I[self.P.argmax()]
-        #TODO: Add VOC, ISC, FF
+        self.VOC = max(self.V[self.I>=0])
+        self.ISC = self.I[self.V.argmin()]
+        self.FF = self.MPP/(self.VOC * self.ISC)
         
     def plot_netlist(self, xmax=50, ymax=150, pv=False):
         if pv == False:
