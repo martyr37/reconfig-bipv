@@ -20,7 +20,7 @@ from solar_cell import SolarCell
 """
 ROWS = 10
 COLUMNS = 6
-CHANNELS = 3 # [connection, series, parallel]
+CHANNELS = 3 # [series1, series2, parallel]
 TERMINALS = 2 # [ground, +ve]
 """
 
@@ -94,7 +94,14 @@ class CircuitEmbedding():
                                 + str(r1) + str(c1)
                         elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both series and parallel."\
+                                + "cells cannot be both types of series."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
         return True
+# TODO: walk through connections to verify valid connections (start from +ve to -ve, any cell not in path is dangling)
+# TODO: generate new embeddings directly by randomising True/False for embedding dimensions
+
+"""
+Model's output is the embedding structure - this will be run through the filtering function as a measure of performance
+
+"""

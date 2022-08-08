@@ -310,7 +310,7 @@ class SolarModule(CircuitEmbedding):
 #%% testing
 """
 obj = SolarModule(10, 6)
-obj.series_embedding()
+#obj.series_embedding()
 #obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
@@ -318,6 +318,4 @@ obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
 """
-
-
  

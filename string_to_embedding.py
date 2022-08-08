@@ -206,6 +206,4 @@ for x in range(20):
     obj = string_to_embedding(10, 6, string)
     obj.make_netlist()
     obj.simulate()
-    obj.plot_netlist()
-
-# TODO: Check netlists are actually connecting correctly by comparing with strings
+    obj.plot_netlist() 
