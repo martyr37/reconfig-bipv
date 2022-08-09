@@ -20,7 +20,7 @@ from solar_cell import SolarCell
 """
 ROWS = 10
 COLUMNS = 6
-CHANNELS = 3 # [connection, series, parallel]
+CHANNELS = 3 # [series1, series2, parallel]
 TERMINALS = 2 # [ground, +ve]
 """
 
@@ -47,14 +47,13 @@ class CircuitEmbedding():
         self.terminal_array = terminal_array
     
     def make_connection(self, r1, c1, r2, c2, connection_type):
-        if connection_type == 's':
+        if connection_type == 's1':
             self.embedding[r1, c1, r2, c2, 0] = True
-            self.embedding[r2, c2, r1, c1, 0] = True
-            self.embedding[r1, c1, r2, c2, 1] = True
             self.embedding[r2, c2, r1, c1, 1] = True
-        elif connection_type == 'p':
-            self.embedding[r1, c1, r2, c2, 0] = True
+        elif connection_type == 's2':
+            self.embedding[r1, c1, r2, c2, 1] = True
             self.embedding[r2, c2, r1, c1, 0] = True
+        elif connection_type == 'p':
             self.embedding[r1, c1, r2, c2, 2] = True
             self.embedding[r2, c2, r1, c1, 2] = True
     
@@ -83,24 +82,49 @@ class CircuitEmbedding():
                 for r1 in range(self.rows):
                     for c1 in range(self.columns):
                 # connection between two cells cannot be series & parallel
-                        if self.embedding[r,c,r1,c1,1] and self.embedding[r,c,r1,c1,2] == True:
+                        if self.embedding[r,c,r1,c1,1] == True and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
                                 + "cells cannot be both series and parallel."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
-                # reverse connection can be different, so long as it is not 
-                # simultaneously series and parallel.
-                # If series or parallel connection is made, check that the
-                # reverse connection (but opposite type) is not also True. 
-                        if True in self.embedding[r,c,r1,c1,1:]:
-                            if self.embedding[r,c,r1,c1,1] == True and self.embedding[r1,c1,r,c,2] == True:
-                                return "Invalid embedding: Connection"\
-                                    + "has to be the same type as its reverse."\
-                                    + "Error occurred at " + str(r1) + str(c1)\
-                                    + str(r2) + str(c2)
-                            if self.embedding[r,c,r1,c1,2] == True and self.embedding[r1,c1,r,c,1] == True:
-                                return "Invalid embedding: Connection"\
-                                    + "has to be the same type as its reverse."\
-                                    + "Error occurred at " + str(r1) + str(c1)\
-                                    + str(r2) + str(c2) 
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,2] == True:
+                            return "Invalid embedding: Connection between two"\
+                                + "cells cannot be both series and parallel."\
+                                + "Error occurred at " + str(r) + str(c)\
+                                + str(r1) + str(c1)
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
+                            return "Invalid embedding: Connection between two"\
+                                + "cells cannot be both types of series."\
+                                + "Error occurred at " + str(r) + str(c)\
+                                + str(r1) + str(c1)
         return True
+# TODO: walk through connections to verify valid connections (start from +ve to -ve, any cell not in path is dangling)
+# TODO: generate new embeddings directly by randomising True/False for embedding dimensions
+
+"""
+Model's output is the embedding structure - this will be run through the 
+filtering function as a measure of performance
+
+"""
+#%% 
+# TODO: delete dangling connections or cells that have no connection to terminals
+# modify embedding before it is passed to "make_netlist" function
+"""
+ROWS = 10
+COLUMNS = 6
+discovered = []
+start_nodes = np.argwhere(obj.terminal_array[:,:,1] == True)
+start_nodes = [(cell[0], cell[1]) for cell in start_nodes]
+
+def recursive_dfs(obj, l):
+    # label all as discovered
+    for cell in l:
+        if cell not in discovered:
+            discovered.append(cell)
+        
+    for new_cell in l:
+        r, c = cell[0], cell[1]
+        alls1 = obj.embedding[r,c,...,0]
+        alls2 = obj.embedding[r,c,...,1]
+        allparallel = obj.embedding[r,c,...,2]
+"""
