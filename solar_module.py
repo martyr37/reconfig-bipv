@@ -54,7 +54,7 @@ class SolarModule(CircuitEmbedding):
                  shading_map = None):
         CircuitEmbedding.__init__(self, rows, columns, channels, terminals)
         
-        if shading_map == None:
+        if shading_map is None:
             self.shading_map = np.full((self.rows, self.columns), 10)
         else:
             self.shading_map = shading_map

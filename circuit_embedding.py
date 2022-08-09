@@ -102,6 +102,29 @@ class CircuitEmbedding():
 # TODO: generate new embeddings directly by randomising True/False for embedding dimensions
 
 """
-Model's output is the embedding structure - this will be run through the filtering function as a measure of performance
+Model's output is the embedding structure - this will be run through the 
+filtering function as a measure of performance
 
+"""
+#%% 
+# TODO: delete dangling connections or cells that have no connection to terminals
+# modify embedding before it is passed to "make_netlist" function
+"""
+ROWS = 10
+COLUMNS = 6
+discovered = []
+start_nodes = np.argwhere(obj.terminal_array[:,:,1] == True)
+start_nodes = [(cell[0], cell[1]) for cell in start_nodes]
+
+def recursive_dfs(obj, l):
+    # label all as discovered
+    for cell in l:
+        if cell not in discovered:
+            discovered.append(cell)
+        
+    for new_cell in l:
+        r, c = cell[0], cell[1]
+        alls1 = obj.embedding[r,c,...,0]
+        alls2 = obj.embedding[r,c,...,1]
+        allparallel = obj.embedding[r,c,...,2]
 """
