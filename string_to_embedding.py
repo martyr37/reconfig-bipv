@@ -16,7 +16,6 @@ from PySpice.Unit import *
 logger = Logging.setup_logging()
 
 from solar_module import SolarModule
-from circuit_embedding import CircuitEmbedding
 
 import regex as re
 import random
@@ -198,7 +197,7 @@ def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 
     return out
 
 #%% Function testing
-
+"""
 string_list = []
 for x in range(20):
     string = generate_string(6, 10)
@@ -207,3 +206,4 @@ for x in range(20):
     obj.make_netlist()
     obj.simulate()
     obj.plot_netlist() 
+ """
