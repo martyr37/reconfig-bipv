@@ -9,6 +9,7 @@ Created on Tue May 17 12:23:35 2022
 ####################################################################################################
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.optimize as opt
 
 import PySpice.Logging.Logging as Logging
 from PySpice.Spice.Netlist import Circuit, SubCircuit
@@ -48,6 +49,8 @@ class SolarModule(CircuitEmbedding):
         self.connect_to_ground(r, c):
         self.connect_to_pos(r, c):
         self.check_embedding()
+        self.validate_embedding()
+        
         
     """
     def __init__(self, rows, columns, channels = 3, terminals = 2,\
@@ -108,7 +111,7 @@ class SolarModule(CircuitEmbedding):
                 # cells below are all 2's (parallel)
                 for r1 in range(r + 1, self.rows):
                     self.make_connection(r, c, r1, c, 'p')
-    
+    # 
     def make_netlist(self):        
         if self.check_embedding() != True:
             raise ValueError("Invalid embedding.")
@@ -257,6 +260,14 @@ class SolarModule(CircuitEmbedding):
                 s2_connect(connection)
             elif ctype == 'p':
                 parallel_connect(connection)
+        
+        dangling = []
+        for node in node_dict:
+            if None in node_dict[node]:
+                dangling.append(node)
+                
+        for d in dangling:
+            node_dict.pop(d)
         # transfer node_dict to PySpice netlist
         line = 0            
         for cell in node_dict:
@@ -272,7 +283,7 @@ class SolarModule(CircuitEmbedding):
     def simulate(self):
         self.circuit.V('input', self.circuit.gnd, 'pos', 0)
         simulator = self.circuit.simulator(temperature=25, nominal_temperature=25)
-        analysis = simulator.dc(Vinput=slice(0,50,0.01))
+        analysis = simulator.dc(Vinput=slice(0,50,0.01))    
 
         self.I = np.array(analysis.Vinput)
         self.V = np.array(analysis.sweep)
@@ -308,8 +319,24 @@ class SolarModule(CircuitEmbedding):
             plt.imshow(self.embedding[r,c,...,2])
         else:
             raise ValueError("connection type should be 's', 's1', 's2', or 'p'")
-    
-#%% testing
+
+#%% generate random shading maps
+def generate_shading(multiplier, limit, rows, columns):
+    a = np.random.rand(rows,columns)*multiplier
+    i = np.where(a > 1)
+    a[i] = limit
+    return a
+
+def generate_gaussian(spots, rows, columns):
+    array = np.zeros((rows, columns))
+    pass # TODO: sort out gaussian shading
+
+#TODO: generate shading maps for ML training
+#TODO: convert ToR datasets from strings to embeddings
+#TODO: Generate training data
+#TODO: Run python notebook 
+
+#%% SolarModule testing
 """
 obj = SolarModule(10, 6)
 #obj.series_embedding()
@@ -320,4 +347,10 @@ obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
 """
- 
+#%% delete_connection testing
+"""
+foo = SolarModule(2, 2)
+foo.tct_embedding()
+foo.delete_connection(1,0)
+foo.make_netlist()
+"""

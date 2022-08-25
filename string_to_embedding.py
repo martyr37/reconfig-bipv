@@ -129,12 +129,8 @@ def string_to_embedding(rows, columns, string):
                     
     return moduleobj
 
-#obj = string_to_embedding(10, 6, test_string)
-#obj.make_netlist()
-#obj.simulate()
-#obj.plot_netlist()
 #%% generate_string function (copy-pasted)
-def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 0):
+def generate_string(rows, columns, adjacent = False, start_col = 0, start_row = 0):
     cell_ids = []
     for row in range(start_row, rows + start_row):
         for column in range(start_col, columns + start_col):
@@ -146,8 +142,8 @@ def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 
     if adjacent == False:
         random.shuffle(cell_ids) # shuffle cell order
             
-    maximum_brackets = int((columns * rows) / 2) #TODO: Change to variable
-    number_of_brackets = random.randint(0, maximum_brackets) 
+    maximum_brackets = int((columns * rows) / 2)
+    number_of_brackets = random.randint(0, maximum_brackets)
     for x in range(0, number_of_brackets):
         if x == 0:
             inserting_index = random.randint(0, len(cell_ids) - 2)
@@ -166,7 +162,7 @@ def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 
         
     pm = '+-'
     
-    maximum_pms = max(columns, rows) - 1 #TODO: Change to variable
+    maximum_pms = max(columns, rows) - 1
     
     number_of_pms = random.randint(0, maximum_pms)
     
@@ -196,7 +192,7 @@ def generate_string(columns, rows, adjacent = False, start_col = 0, start_row = 
     """
     return out
 
-#%% Function testing
+#%% string_to_embedding function testing testing
 """
 string_list = []
 for x in range(20):
@@ -206,4 +202,4 @@ for x in range(20):
     obj.make_netlist()
     obj.simulate()
     obj.plot_netlist() 
- """
+"""
