@@ -327,14 +327,67 @@ def generate_shading(multiplier, limit, rows, columns):
     a[i] = limit
     return a
 
-def generate_gaussian(spots, rows, columns):
-    array = np.zeros((rows, columns))
-    pass # TODO: sort out gaussian shading
-
-#TODO: generate shading maps for ML training
-#TODO: convert ToR datasets from strings to embeddings
-#TODO: Generate training data
-#TODO: Run python notebook 
+def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
+    x_points = [round(np.random.sample()*columns, 2) for x in range(dots)]
+    y_points = [-round(np.random.sample()*rows, 2) for x in range(dots)]
+    """
+    fig, ax = plt.subplots()
+    ax.set_xlim(0, columns)
+    ax.set_ylim(-rows, 0)
+    plt.scatter(x_points, y_points)
+    """
+    
+    cov_matrices = []
+    for x in range(dots):
+        a = np.random.sample(size=(2,2)) * spread
+        if diag == 'r':
+            if np.random.randint(0,2) == 0:
+                diag = False
+            else:
+                diag = True
+        if diag == False:
+            b = np.dot(a, np.transpose(a))
+            cov_matrices.append(b)
+        elif diag == True:
+            a[0][1] = 0
+            a[1][0] = 0
+            cov_matrices.append(a)
+        
+    #print(cov_matrices)
+    
+    sample_array = np.zeros((dots, size, 2))
+    for i in range(dots):
+        sample = np.random.multivariate_normal((x_points[i], y_points[i]),\
+                                                        cov_matrices[i],\
+                                                        size=size)
+        sample_array[i] = sample
+        #xs, ys = sample[:,0], sample[:,1]
+        #plt.scatter(xs, ys)    
+        
+    # Caclulate density
+    shading_array = np.zeros((rows, columns))
+    sample_array = np.reshape(sample_array, (dots*size, 2))   
+    
+    for point in sample_array:
+        x, y = round(point[0]), -round(point[1])
+        if x < 0 or x >= columns:
+            continue
+        if y < 0 or y >= rows:
+            continue
+        #print(x, y)
+        current = shading_array[y, x]
+        shading_array[y, x] = current + 1
+    
+    #plt.imshow(shading_array)
+    #shading_array = shading_array / shading_array.max()
+    #shading_array = np.around(shading_array, 2)
+    #shading_array[shading_array < 0.5] = 0.5
+    
+    shading_array = np.interp(shading_array, \
+                              (shading_array.min(), shading_array.max()), \
+                              (2, 10))
+    
+    return shading_array
 
 #%% SolarModule testing
 """
@@ -347,6 +400,17 @@ obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
 """
+#%% generate_shading & generate_gaussian testing
+#s = generate_gaussian(10, 10, 6)
+#s = generate_shading(1, 1, 10, 6)
+#plt.imshow(s)
+#print(s)
+
+#TODO: generate shading maps for ML training
+#TODO: convert ToR datasets from strings to embeddings
+#TODO: Generate training data
+#TODO: Run python notebook 
+
 #%% delete_connection testing
 """
 foo = SolarModule(2, 2)
