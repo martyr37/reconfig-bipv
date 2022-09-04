@@ -22,11 +22,13 @@ import random
 
 ####################################################################################################
 
-test_string = '-726002147505527370130091036423+-926283843233152110543590(71019325)113095208004426365(12824140504331858145442461947455533451)22+'
+#test_string = '-726002147505527370130091036423+-926283843233152110543590(71019325)113095208004426365(12824140504331858145442461947455533451)22+'
 #test_string = '-3354053262234364131491857283758265706010735502+-80613431049071632101157445535293001122510324944020844250951244924125358130+'
-
-def string_to_embedding(rows, columns, string):
-    moduleobj = SolarModule(rows, columns)
+test_string = '[-836153(5051607152939282)63+-72(9081)8062(7073)91+][-7555+-7494656484958554+][-40+-13151411200325+-0224450132214142430022343012(4433)10+-352331(0504)+]'
+#est_string = '[-65938182715461554094(45724495)5041807584517043836274606452+-928542639153(9073)+][-030201253413213315312005242311121435302200043210+]'
+def string_to_embedding(rows, columns, string, moduleobj=None):
+    if moduleobj == None:
+        moduleobj = SolarModule(rows, columns)
 
     bracket_groups = re.findall(r'\(([0-9]+)\)', string)
     
@@ -39,6 +41,7 @@ def string_to_embedding(rows, columns, string):
         char = string[index]
         if char == '-':
             connect_to_ground = True
+            previous_cell = '' #REMOVE IF THIS BREAKS FUNCTIONALITY
         elif char == '+':
             # connect previous cell/cells to positive
             if string[index - 1].isnumeric() == True:
@@ -112,7 +115,7 @@ def string_to_embedding(rows, columns, string):
                 else:
                     # string like '-(1234)56', 56 must have a series connection
                     # to 12 and 34
-                    if string[index - 2] == ')':
+                    if string[max(0, index - 2)] == ')':
                         group = bracket_groups[bracket_counter]
                         elements = [group[i:i+2] for i in range(0, len(group), 2)]
                         for element in elements:
@@ -128,6 +131,75 @@ def string_to_embedding(rows, columns, string):
             return "Error - Invalid character " + char
                     
     return moduleobj
+
+#%% super_string_to_embedding function
+def super_to_embedding(rows, columns, string):
+    moduleobj = SolarModule(rows, columns)
+    
+    sans_neg = re.sub(r'(?<=\[)-', '', string)
+    #sans_pos = re.sub(r'\+', '', sans_neg)
+    blocks = re.findall(r'\[.+?\]', sans_neg)
+    
+    block_locations = [sans_neg.index(x) for x in blocks]
+    
+    l = []
+    for index in range(0, len(sans_neg)):
+        if block_locations != []:
+            if index == block_locations[0]:
+                l.append(blocks.pop(0)) 
+                block_locations.pop(0)
+        if sans_neg[index] == '{' or sans_neg[index] == '}':
+            l.append(sans_neg[index])
+    
+    for index in range(len(l)):
+        if l[index] != '{':
+            l[index] = '[-' + l[index][1:]
+            break
+        
+    curly = 0
+    previous_cells = []
+    
+    for index in range(len(l) - 1, -1, -1):
+        if l[index] != '}':
+            last_chunk = l[index]
+            break
+        
+    for index in range(len(l)):
+        chunk = l[index]
+        pos_cells = re.findall(r'[0-9]{2}(?=\)?\+)', chunk)
+        if chunk != last_chunk:
+            s = re.sub(r'\+', '', chunk)
+        elif chunk == last_chunk:
+            s = chunk
+        s = s.lstrip('[')
+        s = s.rstrip(']')
+        if chunk == '{':
+            curly = 1
+        elif chunk == '}':
+            curly = 0
+        else:
+            # connect initial cell to previous cell
+            first_cell = re.search(r'\(?[0-9]{2}', s).group(0)
+            first_cell = first_cell.lstrip('(')
+            for cell in previous_cells:
+                r1, c1 = int(cell[0]), int(cell[1])
+                r2, c2 = int(first_cell[0]), int(first_cell[1])
+                if curly == 0 or curly == 1:
+                    moduleobj.make_connection(r1, c1, r2, c2, 's1') # it's still s1 after {
+                elif curly == 2:
+                    moduleobj.make_connection(r1, c1, r2, c2, 'p')
+            #print(previous_cells)
+            if curly == 1:
+                curly = 2
+            string_to_embedding(rows, columns, s, moduleobj=moduleobj)
+            previous_cells = pos_cells
+    
+    return moduleobj
+
+obj = super_to_embedding(10, 6, test_string)
+obj.make_netlist()
+obj.simulate()
+obj.plot_netlist()
 
 #%% generate_string function (copy-pasted)
 def generate_string(rows, columns, adjacent = False, start_col = 0, start_row = 0):

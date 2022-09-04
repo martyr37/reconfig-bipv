@@ -382,10 +382,13 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
     #shading_array = shading_array / shading_array.max()
     #shading_array = np.around(shading_array, 2)
     #shading_array[shading_array < 0.5] = 0.5
-    
     shading_array = np.interp(shading_array, \
                               (shading_array.min(), shading_array.max()), \
-                              (2, 10))
+                              (0, 10))
+    shading_array[shading_array > 4] = 4
+    shading_array = np.interp(shading_array, \
+                              (shading_array.min(), shading_array.max()), \
+                              (0, 10))
     
     return shading_array
 
@@ -401,7 +404,7 @@ obj.plot_netlist()
 #obj.imshow(3, 3, 's')
 """
 #%% generate_shading & generate_gaussian testing
-#s = generate_gaussian(10, 10, 6)
+#s = generate_gaussian(20, 10, 6, diag='r')
 #s = generate_shading(1, 1, 10, 6)
 #plt.imshow(s)
 #print(s)
