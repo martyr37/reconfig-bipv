@@ -196,10 +196,10 @@ def super_to_embedding(rows, columns, string):
     
     return moduleobj
 
-obj = super_to_embedding(10, 6, test_string)
-obj.make_netlist()
-obj.simulate()
-obj.plot_netlist()
+#obj = super_to_embedding(10, 6, test_string)
+#obj.make_netlist()
+#obj.simulate()
+#obj.plot_netlist()
 
 #%% generate_string function (copy-pasted)
 def generate_string(rows, columns, adjacent = False, start_col = 0, start_row = 0):
