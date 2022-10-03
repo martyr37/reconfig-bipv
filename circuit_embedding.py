@@ -110,6 +110,65 @@ class CircuitEmbedding():
         return True
     
     def filter_embedding(self):
+        
+        #TODO: Self-connection filtering
+        #TODO: Conflicting connection filtering
+            
+        """
+        Criteria in decreasing order of priority:
+            
+        - number of self-connections (bad)
+        - number of conflicting series/parallel connections (bad)
+        - Length of longest path (good)
+        - Ground to positive terminal? 0 or max
+        - number of dangling/isolated connections deleted (bad)
+        - fraction of total cells connected - to be removed later if needed
+        
+        Then train on power, fill factor, etc.
+        
+        - High PMP
+        - High VMP and IMP
+        - High FF
+        
+        """
+        self_connections = 0
+        
+        for r in range(self.rows):
+            for c in range(self.columns):
+                if self.embedding[r,c,r,c,0] == True:
+                    self.embedding[r,c,r,c,0] = False
+                    self_connections += 1
+                if self.embedding[r,c,r,c,1] == True:
+                    self.embedding[r,c,r,c,1] = False
+                    self_connections += 1
+                if self.embedding[r,c,r,c,2] == True:
+                    self.embedding[r,c,r,c,2] = False
+                    self_connections += 1     
+                    
+        conflicting_connections = 0
+        
+        def pick_connection(embedding, n1, n2):
+            coin = np.random.randint(0, 2)
+            if coin == 0:
+                embedding[r, c, r1, c1, n1] = False
+            elif coin == 1:
+                embedding[r, c, r1, c1, n2] = False
+        
+        for r in range(self.rows):
+            for c in range(self.columns):        
+                for r1 in range(self.rows):
+                    for c1 in range(self.columns):
+                # connection between two cells cannot be series & parallel
+                        if self.embedding[r,c,r1,c1,1] == True and self.embedding[r,c,r1,c1,2] == True:
+                            pick_connection(self.embedding, 1, 2)
+                            conflicting_connections += 1
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,2] == True:
+                            pick_connection(self.embedding, 0, 2)
+                            conflicting_connections += 1
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
+                            pick_connection(self.embedding, 0, 1)
+                            conflicting_connections += 1
+                    
         discovered1 = []
         discovered2 = []
         start_nodes = np.argwhere(self.terminal_array[:,:,1] == True)
@@ -117,6 +176,7 @@ class CircuitEmbedding():
         end_nodes = np.argwhere(self.terminal_array[:,:,0] == True)
         end_nodes = [(cell[0], cell[1]) for cell in end_nodes]
 
+        depth = 1
         def recursive_dfs(l, discovered):
             # label all as discovered
             for cell in l:
@@ -135,11 +195,19 @@ class CircuitEmbedding():
                 
                 for c in adj_cells:
                     if c not in discovered:
+                        depth += 1
                         recursive_dfs([c], discovered)
                         
                    
         recursive_dfs(start_nodes, discovered1)
         recursive_dfs(end_nodes, discovered2)
+        
+        #ground_connections = self.terminal_array[:,:,0]
+        #pos_connections = self.terminal_array[:,:,1]
+        
+        ## If discovered 1 or 2 contains elements from ground and from pos
+        
+        ground_to_pos = False
 
         discovered = discovered1 + discovered2
         discovered = set(discovered)
@@ -153,9 +221,17 @@ class CircuitEmbedding():
             if x not in all_cells:
                 dangling.append(x)
         
+        deleted_connections = 0
         for cell in dangling:
             r, c = cell[0], cell[1]
             self.delete_connection(r, c)
+            deleted_connections += 1
+        
+        fraction = round(len(all_cells)/(self.columns*self.rows), 2)
+        
+        # return values in docstring
+        return (self_connections, conflicting_connections, depth,\
+                int(ground_to_pos), deleted_connections, fraction)
         
 # TODO: generate new embeddings directly by randomising True/False for embedding dimensions
 

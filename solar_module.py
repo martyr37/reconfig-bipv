@@ -396,28 +396,19 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
 """
 obj = SolarModule(10, 6)
 #obj.series_embedding()
-#obj.tct_embedding()
+obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
 obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
+## --PRINT NETLIST-- 
+print(obj.circuit)
 """
-#%% generate_shading & generate_gaussian testing
-#s = generate_gaussian(20, 10, 6, diag='r')
-#s = generate_shading(1, 1, 10, 6)
-#plt.imshow(s)
-#print(s)
-
-#TODO: generate shading maps for ML training
-#TODO: convert ToR datasets from strings to embeddings
-#TODO: Generate training data
-#TODO: Run python notebook 
-
-#%% delete_connection testing
-"""
-foo = SolarModule(2, 2)
-foo.tct_embedding()
-foo.delete_connection(1,0)
-foo.make_netlist()
-"""
+#%%
+boo = [True, False]
+rand = np.random.choice(boo, size=(10, 6, 10, 6, 3))
+foo = SolarModule(10, 6)
+foo.embedding = rand
+print(foo.filter_embedding())
+print(foo.check_embedding())
