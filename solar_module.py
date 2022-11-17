@@ -111,9 +111,10 @@ class SolarModule(CircuitEmbedding):
                 # cells below are all 2's (parallel)
                 for r1 in range(r + 1, self.rows):
                     self.make_connection(r, c, r1, c, 'p')
-    # 
+    
     def make_netlist(self):        
         if self.check_embedding() != True:
+            print(self.check_embedding())
             raise ValueError("Invalid embedding.")
         
         circuit = Circuit('Netlist')
@@ -405,10 +406,34 @@ obj.plot_netlist()
 ## --PRINT NETLIST-- 
 print(obj.circuit)
 """
-#%%
+#%% Filter Embedding testing
+"""
 boo = [True, False]
-rand = np.random.choice(boo, size=(10, 6, 10, 6, 3))
-foo = SolarModule(10, 6)
+rand = np.random.choice(boo, size=(3, 3, 3, 3, 3))
+foo = SolarModule(3, 3)
 foo.embedding = rand
+foo.connect_to_ground(0, 0)
+foo.connect_to_pos(2, 2)
 print(foo.filter_embedding())
 print(foo.check_embedding())
+foo.make_netlist()
+foo.simulate()
+foo.plot_netlist()
+print(foo.MPP)
+"""
+#%% manual embedding filter testing (one loose connection)
+"""
+foo = SolarModule(3,3)
+foo.connect_to_ground(0,0)
+foo.connect_to_pos(2,2)
+foo.make_connection(2, 2, 1, 1, 's1')
+print(foo.embedding)
+print(foo.filter_embedding())
+foo.check_embedding
+foo.make_netlist()
+foo.simulate()
+foo.plot_netlist()
+print(foo.MPP)
+"""
+
+

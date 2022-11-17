@@ -128,3 +128,18 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .DS_Store
+Training Data/training_data-340-505:498.csv
+Training Data/training_data-9:998.csv
+Training Data/training_data-98:495.csv
+Training Data/training_data-98:473.csv
+Training Data/training_data-98-110:606.csv
+Training Data/training_data-98-109.csv
+Training Data/training_data-340-2794:895.csv
+Training Data/training_data-340-1405:640.csv
+Training Data/training_data-340-1130:917.csv
+Training Data/training_data-185-340:622.csv
+Training Data/training_data-110-184:529.csv
+Training Data/training_data-110-184:484.csv
+training_data.csv
+training_data.csv
+*.pth
