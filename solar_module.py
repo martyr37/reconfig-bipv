@@ -42,6 +42,9 @@ class SolarModule(CircuitEmbedding):
         self.terminal_array
         self.shading_map
         self.circuit
+        self.series_connections
+        self.parallel_connections
+        self.ratio_of_connections
         
     Class Methods:
         self.create_empty_embedding()
@@ -280,6 +283,14 @@ class SolarModule(CircuitEmbedding):
         self.circuit = circuit
         self.connection_dict = connection_dict
         self.node_dict = node_dict
+        self.series_connections = np.sum(self.embedding[...,0])\
+            + np.sum(self.embedding[...,1])
+        self.parallel_connections = np.sum(self.embedding[...,2])
+        
+        if self.parallel_connections == 0:
+            self.ratio_of_connections = 0
+        elif self.parallel_connections > 0:
+            self.ratio_of_connections = self.series_connections / self.parallel_connections
         
     def simulate(self):
         self.circuit.V('input', self.circuit.gnd, 'pos', 0)
