@@ -42,6 +42,9 @@ class SolarModule(CircuitEmbedding):
         self.terminal_array
         self.shading_map
         self.circuit
+        self.series_connections
+        self.parallel_connections
+        self.ratio_of_connections
         
     Class Methods:
         self.create_empty_embedding()
@@ -111,9 +114,10 @@ class SolarModule(CircuitEmbedding):
                 # cells below are all 2's (parallel)
                 for r1 in range(r + 1, self.rows):
                     self.make_connection(r, c, r1, c, 'p')
-    # 
+    
     def make_netlist(self):        
         if self.check_embedding() != True:
+            self.check_embedding()
             raise ValueError("Invalid embedding.")
         
         circuit = Circuit('Netlist')
@@ -279,6 +283,14 @@ class SolarModule(CircuitEmbedding):
         self.circuit = circuit
         self.connection_dict = connection_dict
         self.node_dict = node_dict
+        self.series_connections = np.sum(self.embedding[...,0])\
+            + np.sum(self.embedding[...,1])
+        self.parallel_connections = np.sum(self.embedding[...,2])
+        
+        if self.parallel_connections == 0:
+            self.ratio_of_connections = 0
+        elif self.parallel_connections > 0:
+            self.ratio_of_connections = self.series_connections / self.parallel_connections
         
     def simulate(self):
         self.circuit.V('input', self.circuit.gnd, 'pos', 0)
@@ -327,24 +339,28 @@ def generate_shading(multiplier, limit, rows, columns):
     a[i] = limit
     return a
 
-def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
+def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag_setting='r'):
     x_points = [round(np.random.sample()*columns, 2) for x in range(dots)]
     y_points = [-round(np.random.sample()*rows, 2) for x in range(dots)]
     """
     fig, ax = plt.subplots()
     ax.set_xlim(0, columns)
     ax.set_ylim(-rows, 0)
+    ax.grid('both',color='k',linewidth=0.6)
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
     plt.scatter(x_points, y_points)
+    plt.figure()
     """
-    
     cov_matrices = []
     for x in range(dots):
         a = np.random.sample(size=(2,2)) * spread
-        if diag == 'r':
+        if diag_setting == 'r':
             if np.random.randint(0,2) == 0:
                 diag = False
             else:
                 diag = True
+        else:
+            diag = diag_setting
         if diag == False:
             b = np.dot(a, np.transpose(a))
             cov_matrices.append(b)
@@ -353,16 +369,28 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
             a[1][0] = 0
             cov_matrices.append(a)
         
-    #print(cov_matrices)
+    print(cov_matrices)
     
     sample_array = np.zeros((dots, size, 2))
+    """
+    fig, ax = plt.subplots()
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.grid('both',color='k',linewidth=0.6)
+    """
     for i in range(dots):
         sample = np.random.multivariate_normal((x_points[i], y_points[i]),\
                                                         cov_matrices[i],\
                                                         size=size)
         sample_array[i] = sample
-        #xs, ys = sample[:,0], sample[:,1]
-        #plt.scatter(xs, ys)    
+        xs, ys = sample[:,0], sample[:,1]
+        """
+        ax.scatter(xs, ys, s=20)
+        ax.set_xlim(0, 6)
+        ax.set_ylim(-10,0)
+        """
         
     # Caclulate density
     shading_array = np.zeros((rows, columns))
@@ -382,6 +410,13 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
     #shading_array = shading_array / shading_array.max()
     #shading_array = np.around(shading_array, 2)
     #shading_array[shading_array < 0.5] = 0.5
+    """
+    fig, ax = plt.subplots()
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    plt.imshow(shading_array)
+    """
     shading_array = np.interp(shading_array, \
                               (shading_array.min(), shading_array.max()), \
                               (0, 10))
@@ -389,35 +424,55 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
     shading_array = np.interp(shading_array, \
                               (shading_array.min(), shading_array.max()), \
                               (0, 10))
-    
+    """
+    fig, ax = plt.subplots()
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    plt.imshow(shading_array)
+    """
     return shading_array
-
 #%% SolarModule testing
 """
 obj = SolarModule(10, 6)
 #obj.series_embedding()
-#obj.tct_embedding()
+obj.tct_embedding()
 obj.make_netlist()
 obj.simulate()
 obj.plot_netlist()
 #obj.imshow(3, 3)
 #obj.imshow(3, 3, 's')
+## --PRINT NETLIST-- 
+print(obj.circuit)
 """
-#%% generate_shading & generate_gaussian testing
-#s = generate_gaussian(20, 10, 6, diag='r')
-#s = generate_shading(1, 1, 10, 6)
-#plt.imshow(s)
-#print(s)
-
-#TODO: generate shading maps for ML training
-#TODO: convert ToR datasets from strings to embeddings
-#TODO: Generate training data
-#TODO: Run python notebook 
-
-#%% delete_connection testing
+#%% Filter Embedding testing
 """
-foo = SolarModule(2, 2)
-foo.tct_embedding()
-foo.delete_connection(1,0)
+boo = [True, False]
+rand = np.random.choice(boo, size=(3, 3, 3, 3, 3))
+foo = SolarModule(3, 3)
+foo.embedding = rand
+foo.connect_to_ground(0, 0)
+foo.connect_to_pos(2, 2)
+print(foo.filter_embedding())
+print(foo.check_embedding())
 foo.make_netlist()
+foo.simulate()
+foo.plot_netlist()
+print(foo.MPP)
 """
+#%% manual embedding filter testing (one loose connection)
+"""
+foo = SolarModule(3,3)
+foo.connect_to_ground(0,0)
+foo.connect_to_pos(2,2)
+foo.make_connection(2, 2, 1, 1, 's1')
+print(foo.embedding)
+print(foo.filter_embedding())
+foo.check_embedding
+foo.make_netlist()
+foo.simulate()
+foo.plot_netlist()
+print(foo.MPP)
+"""
+
+

@@ -21,9 +21,7 @@ ROWS = 10
 COLUMNS = 6
 CHANNELS = 3 # [series1, series2, parallel]
 TERMINALS = 2 # [ground, +ve]
-"""
-
-#%% CircuitEmbedding object definition
+"""#%% CircuitEmbedding object definition
 class CircuitEmbedding():
     
     def __init__(self, rows, columns, channels = 3, terminals = 2):
@@ -94,30 +92,104 @@ class CircuitEmbedding():
                 # connection between two cells cannot be series & parallel
                         if self.embedding[r,c,r1,c1,1] == True and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both series and parallel."\
+                                + " cells cannot be both series and parallel."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
                         elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both series and parallel."\
+                                + " cells cannot be both series and parallel."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
                         elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both types of series."\
+                                + " cells cannot be both types of series."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
         return True
     
     def filter_embedding(self):
-        discovered1 = []
-        discovered2 = []
-        start_nodes = np.argwhere(self.terminal_array[:,:,1] == True)
-        start_nodes = [(cell[0], cell[1]) for cell in start_nodes]
-        end_nodes = np.argwhere(self.terminal_array[:,:,0] == True)
-        end_nodes = [(cell[0], cell[1]) for cell in end_nodes]
-
+            
+        """
+        Criteria in decreasing order of priority:
+            
+        - number of self-connections (bad)
+        - number of conflicting series/parallel connections (bad)
+        - Length of longest path (good)
+        - Ground to positive terminal? 0 or max
+        - number of dangling/isolated connections deleted (bad)
+        - fraction of total cells connected - to be removed later if needed
+        
+        Then train on power, fill factor, etc.
+        
+        - High PMP
+        - High VMP and IMP
+        - High FF
+        
+        """
+        self_connections = 0
+        conflicting_connections = 0
+                
+        for r in range(self.rows):
+            for c in range(self.columns):
+                if self.embedding[r,c,r,c,0] == True:
+                    self.embedding[r,c,r,c,0] = False
+                    self_connections += 1
+                if self.embedding[r,c,r,c,1] == True:
+                    self.embedding[r,c,r,c,1] = False
+                    self_connections += 1
+                if self.embedding[r,c,r,c,2] == True:
+                    self.embedding[r,c,r,c,2] = False
+                    self_connections += 1     
+                for r1 in range(self.rows):
+                    for c1 in range(self.columns):
+                # connection between two cells cannot be series & parallel
+                        if list(self.embedding[r, c, r1, c1, :]) == [True, True, True]:
+                            coin = np.random.randint(0, 3)
+                            if coin == 0:
+                                self.embedding[r, c, r1, c1, 1] = False
+                                self.embedding[r, c, r1, c1, 2] = False
+                            elif coin == 1:
+                                self.embedding[r, c, r1, c1, 0] = False
+                                self.embedding[r, c, r1, c1, 2] = False
+                            elif coin == 2:
+                                self.embedding[r, c, r1, c1, 0] = False
+                                self.embedding[r, c, r1, c1, 1] = False
+                            conflicting_connections += 1
+                        elif self.embedding[r,c,r1,c1,1] == True and self.embedding[r,c,r1,c1,2] == True:
+                            coin = np.random.randint(0, 2)
+                            if coin == 0:
+                                self.embedding[r, c, r1, c1, 1] = False
+                            elif coin == 1:
+                                self.embedding[r, c, r1, c1, 2] = False
+                            conflicting_connections += 1
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,2] == True:
+                            coin = np.random.randint(0, 2)
+                            if coin == 0:
+                                self.embedding[r, c, r1, c1, 0] = False
+                            elif coin == 1:
+                                self.embedding[r, c, r1, c1, 2] = False
+                            conflicting_connections += 1
+                        elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
+                            coin = np.random.randint(0, 2)
+                            if coin == 0:
+                                self.embedding[r, c, r1, c1, 0] = False
+                            elif coin == 1:
+                                self.embedding[r, c, r1, c1, 1] = False
+                            conflicting_connections += 1
+    
+        for r in range(self.rows):
+            for c in range(self.columns):  
+                discovered1 = []
+                discovered2 = []
+                start_nodes = np.argwhere(self.terminal_array[:,:,1] == True)
+                start_nodes = [(cell[0], cell[1]) for cell in start_nodes]
+                end_nodes = np.argwhere(self.terminal_array[:,:,0] == True)
+                end_nodes = [(cell[0], cell[1]) for cell in end_nodes]
+        
+        global depth
+        depth = 1
         def recursive_dfs(l, discovered):
+            global depth
             # label all as discovered
             for cell in l:
                 discovered.append(cell)
@@ -135,27 +207,71 @@ class CircuitEmbedding():
                 
                 for c in adj_cells:
                     if c not in discovered:
+                        depth += 1 #TODO: Fix - connect ground/pos to longest string of series connection
                         recursive_dfs([c], discovered)
                         
-                   
+                        
         recursive_dfs(start_nodes, discovered1)
         recursive_dfs(end_nodes, discovered2)
-
+        
+        ground_connections = self.terminal_array[:,:,0]
+        pos_connections = self.terminal_array[:,:,1]
+        
+        ## If discovered 1 or 2 contains elements from ground and from pos
+        ground = False
+        pos = False
+        
         discovered = discovered1 + discovered2
         discovered = set(discovered)
+        
+        #print(discovered1)
+        #print(discovered2)
+        #print(discovered)
+        
+        
+        for x in discovered1:
+            r, c  = x[0], x[1]
+            if ground_connections[r, c] == True:
+                ground = True
+            if pos_connections[r, c] == True:
+                pos = True
+        if not(ground and pos): # only run if ground and pos are not both True
+            ground = False
+            pos = False
+            for x in discovered2:
+                r, c  = x[0], x[1]
+                if ground_connections[r, c] == True:
+                    ground = True
+                if pos_connections[r, c] == True:
+                    pos = True
+        if ground and pos:
+            ground_to_pos = True
+        else:
+            ground_to_pos = False
+        
         all_cells = []
         for r in range(self.rows):
             for c in range(self.columns):
                 all_cells.append((r, c))
         
         dangling = []
-        for x in discovered1:
-            if x not in all_cells:
+        for x in all_cells:
+            if x not in discovered:
                 dangling.append(x)
         
+        #print(dangling)
+        deleted_connections = 0
         for cell in dangling:
             r, c = cell[0], cell[1]
-            self.delete_connection(r, c)
+            self.delete_connection(r, c, t=False)
+            deleted_connections += 1
+        
+        fraction = round(len(discovered)/(self.columns*self.rows), 2)
+        
+        no_of_connections = len(np.where(self.embedding)[0])
+        
+        return (self_connections, conflicting_connections, no_of_connections,\
+                depth, int(ground_to_pos), deleted_connections, fraction)
         
 # TODO: generate new embeddings directly by randomising True/False for embedding dimensions
 

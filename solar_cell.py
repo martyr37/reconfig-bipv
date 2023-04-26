@@ -13,6 +13,7 @@ import PySpice.Logging.Logging as Logging
 from PySpice.Spice.Netlist import Circuit, SubCircuit
 from PySpice.Unit import *
 logger = Logging.setup_logging()
+logger.setLevel(logging.CRITICAL)
 
 ####################################################################################################
 
