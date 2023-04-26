@@ -117,7 +117,7 @@ class SolarModule(CircuitEmbedding):
     
     def make_netlist(self):        
         if self.check_embedding() != True:
-            print(self.check_embedding())
+            self.check_embedding()
             raise ValueError("Invalid embedding.")
         
         circuit = Circuit('Netlist')
@@ -339,24 +339,28 @@ def generate_shading(multiplier, limit, rows, columns):
     a[i] = limit
     return a
 
-def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
+def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag_setting='r'):
     x_points = [round(np.random.sample()*columns, 2) for x in range(dots)]
     y_points = [-round(np.random.sample()*rows, 2) for x in range(dots)]
     """
     fig, ax = plt.subplots()
     ax.set_xlim(0, columns)
     ax.set_ylim(-rows, 0)
+    ax.grid('both',color='k',linewidth=0.6)
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
     plt.scatter(x_points, y_points)
+    plt.figure()
     """
-    
     cov_matrices = []
     for x in range(dots):
         a = np.random.sample(size=(2,2)) * spread
-        if diag == 'r':
+        if diag_setting == 'r':
             if np.random.randint(0,2) == 0:
                 diag = False
             else:
                 diag = True
+        else:
+            diag = diag_setting
         if diag == False:
             b = np.dot(a, np.transpose(a))
             cov_matrices.append(b)
@@ -365,16 +369,28 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
             a[1][0] = 0
             cov_matrices.append(a)
         
-    #print(cov_matrices)
+    print(cov_matrices)
     
     sample_array = np.zeros((dots, size, 2))
+    """
+    fig, ax = plt.subplots()
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.grid('both',color='k',linewidth=0.6)
+    """
     for i in range(dots):
         sample = np.random.multivariate_normal((x_points[i], y_points[i]),\
                                                         cov_matrices[i],\
                                                         size=size)
         sample_array[i] = sample
-        #xs, ys = sample[:,0], sample[:,1]
-        #plt.scatter(xs, ys)    
+        xs, ys = sample[:,0], sample[:,1]
+        """
+        ax.scatter(xs, ys, s=20)
+        ax.set_xlim(0, 6)
+        ax.set_ylim(-10,0)
+        """
         
     # Caclulate density
     shading_array = np.zeros((rows, columns))
@@ -394,6 +410,13 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
     #shading_array = shading_array / shading_array.max()
     #shading_array = np.around(shading_array, 2)
     #shading_array[shading_array < 0.5] = 0.5
+    """
+    fig, ax = plt.subplots()
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    plt.imshow(shading_array)
+    """
     shading_array = np.interp(shading_array, \
                               (shading_array.min(), shading_array.max()), \
                               (0, 10))
@@ -401,9 +424,14 @@ def generate_gaussian(dots, rows, columns, spread=2, size=1000, diag='r'):
     shading_array = np.interp(shading_array, \
                               (shading_array.min(), shading_array.max()), \
                               (0, 10))
-    
+    """
+    fig, ax = plt.subplots()
+    ax.tick_params(axis='both', which='both', length=0)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    plt.imshow(shading_array)
+    """
     return shading_array
-
 #%% SolarModule testing
 """
 obj = SolarModule(10, 6)

@@ -21,9 +21,7 @@ ROWS = 10
 COLUMNS = 6
 CHANNELS = 3 # [series1, series2, parallel]
 TERMINALS = 2 # [ground, +ve]
-"""
-
-#%% CircuitEmbedding object definition
+"""#%% CircuitEmbedding object definition
 class CircuitEmbedding():
     
     def __init__(self, rows, columns, channels = 3, terminals = 2):
@@ -94,25 +92,22 @@ class CircuitEmbedding():
                 # connection between two cells cannot be series & parallel
                         if self.embedding[r,c,r1,c1,1] == True and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both series and parallel."\
+                                + " cells cannot be both series and parallel."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
                         elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,2] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both series and parallel."\
+                                + " cells cannot be both series and parallel."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
                         elif self.embedding[r,c,r1,c1,0] == True and self.embedding[r,c,r1,c1,1] == True:
                             return "Invalid embedding: Connection between two"\
-                                + "cells cannot be both types of series."\
+                                + " cells cannot be both types of series."\
                                 + "Error occurred at " + str(r) + str(c)\
                                 + str(r1) + str(c1)
         return True
     
     def filter_embedding(self):
-        
-        #TODO: Self-connection filtering
-        #TODO: Conflicting connection filtering
             
         """
         Criteria in decreasing order of priority:

@@ -71,8 +71,8 @@ outfile = 'training_data.csv'
 with open(outfile, 'a', newline='') as f:
     writer = csv.writer(f)
     header = ['Shading Map #', 'SuperString #', 'MPP', 'VMP', 'IMP', 'VOC', 'ISC', 'FF']
-    writer.writerow(header)
-    for map_no in range(3732, 10000):
+    #writer.writerow(header)
+    for map_no in range(4332, 10000):
         shading_map = shading_series[map_no]
         for configuration_no in range(0, len(configurations)):
             superstring = configurations[configuration_no]
